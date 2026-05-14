@@ -1,58 +1,122 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Admin Template Starter
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Template starter untuk membuat website baru dengan admin panel yang sudah siap pakai. Dibangun dengan **Laravel 13**, **Tailwind CSS v4**, dan **Argon Dashboard**.
 
-## About Laravel
+## Fitur
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- ✅ Login / Logout authentication
+- ✅ Admin Dashboard dengan activity log
+- ✅ Halaman Settings (identitas, branding, kontak, social media, SEO, tampilan, maintenance)
+- ✅ Ubah password admin
+- ✅ Dark/Light mode toggle
+- ✅ Responsive sidebar navigation
+- ✅ DataTables integration
+- ✅ SweetAlert2 notifications
+- ✅ Activity logging otomatis
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Instalasi
 
 ```bash
-composer require laravel/boost --dev
+# Clone / copy project
+composer install
+npm install
 
-php artisan boost:install
+# Setup environment
+cp .env.example .env
+php artisan key:generate
+
+# Database
+php artisan migrate --seed
+php artisan storage:link
+
+# Development
+composer dev
+# atau manual:
+php artisan serve
+npm run dev
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Login Default
 
-## Contributing
+| Email | Password |
+|-------|----------|
+| admin@admin.com | password |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+> ⚠️ Ganti password setelah login pertama kali!
 
-## Code of Conduct
+## Struktur Admin
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```
+app/
+├── Http/Controllers/
+│   ├── Admin/
+│   │   ├── DashboardController.php
+│   │   ├── SiteSettingController.php
+│   │   └── PasswordController.php
+│   └── Auth/
+│       └── LoginController.php
+├── Models/
+│   ├── ActivityLog.php
+│   ├── SiteSetting.php
+│   └── User.php
+└── View/Components/Admin/
+    ├── PageHeader.php
+    └── EmptyState.php
 
-## Security Vulnerabilities
+resources/views/
+├── admin/
+│   ├── dashboard/index.blade.php
+│   ├── password/edit.blade.php
+│   ├── settings/edit.blade.php
+│   └── template/
+│       ├── main.blade.php (layout utama)
+│       ├── head.blade.php
+│       ├── sidebar.blade.php
+│       ├── navbar.blade.php
+│       ├── footer.blade.php
+│       └── scripts.blade.php
+├── auth/login.blade.php
+└── components/admin/
+    ├── page-header.blade.php
+    └── empty-state.blade.php
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Cara Menambah Halaman Baru
+
+1. Buat Controller di `app/Http/Controllers/Admin/`
+2. Buat View di `resources/views/admin/nama-fitur/`
+3. Tambah route di `routes/web.php` dalam group `admin`
+4. Tambah link di sidebar: `resources/views/admin/template/sidebar.blade.php`
+
+### Contoh:
+
+```php
+// routes/web.php (dalam group admin)
+Route::resource('products', ProductController::class)->names('admin.products');
+```
+
+```php
+// View extends layout
+@extends('admin.template.main')
+@section('title', 'Products')
+@section('page_title', 'Products')
+@section('content')
+  {{-- konten di sini --}}
+@endsection
+```
+
+## Tech Stack
+
+- PHP 8.3+
+- Laravel 13
+- Tailwind CSS v4
+- Vite 8
+- Argon Dashboard (CSS/JS)
+- jQuery + DataTables
+- SweetAlert2
+- Chart.js
+- Font Awesome 6
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT

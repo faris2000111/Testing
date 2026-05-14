@@ -2,24 +2,34 @@
 
 namespace Database\Seeders;
 
+use App\Models\SiteSetting;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Create default admin user
+        User::firstOrCreate(
+            ['email' => 'admin@admin.com'],
+            [
+                'name' => 'Administrator',
+                'password' => bcrypt('password'),
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Create default site settings
+        SiteSetting::firstOrCreate(
+            ['id' => 1],
+            [
+                'project_name' => 'My Project',
+                'site_name' => 'My Website',
+                'tagline' => 'Your awesome tagline here',
+            ]
+        );
     }
 }

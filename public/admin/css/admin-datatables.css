@@ -1,0 +1,197 @@
+/**
+ * DataTables inside admin cards — avoid double scrollbars, tighten layout.
+ */
+.card .dataTables_wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.card .dataTables_wrapper .dataTables_length,
+.card .dataTables_wrapper .dataTables_filter {
+  margin-bottom: 0;
+}
+
+.card .dataTables_wrapper .dataTables_length label,
+.card .dataTables_wrapper .dataTables_filter label {
+  margin-bottom: 0;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.card .dataTables_wrapper .dataTables_filter input {
+  margin-left: 0.5rem;
+  max-width: 14rem;
+}
+
+/* Single wrapper scroll if ever needed; no nested .table-responsive + DT */
+.card .dataTables_wrapper .table-responsive,
+.card .dataTables_wrapper .dataTables_scrollHead,
+.card .dataTables_wrapper .dataTables_scrollBody {
+  overflow-x: auto;
+}
+
+table.dataTable.admin-dt {
+  width: 100% !important;
+  table-layout: auto;
+  margin-top: 0 !important;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table.dataTable.admin-dt thead th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8392ab;
+  border-bottom: 1px solid #e9ecef;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  vertical-align: middle;
+}
+
+table.dataTable.admin-dt tbody td {
+  font-size: 0.875rem;
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+  vertical-align: middle;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Keep text columns tidy, but do not clip action buttons */
+table.dataTable.admin-dt thead th:not(.dt-actions),
+table.dataTable.admin-dt tbody td:not(.dt-actions) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Primary text column may breathe but is not pinned to a huge minimum */
+table.dataTable.admin-dt tbody td:first-child {
+  min-width: 12rem;
+}
+
+/* Action column: compact, sized to its buttons (no fixed min) */
+table.dataTable.admin-dt thead th.dt-actions,
+table.dataTable.admin-dt tbody td.dt-actions {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  text-align: right !important;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  padding-right: 0.75rem;
+}
+
+table.dataTable.admin-dt tbody td.dt-actions {
+  background-color: inherit;
+}
+
+table.dataTable.admin-dt tbody td.dt-actions .btn-group {
+  flex-wrap: nowrap;
+}
+
+table.dataTable.admin-dt tbody td.dt-actions > *,
+table.dataTable.admin-dt tbody td.dt-actions .d-flex {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: max-content;
+  position: relative;
+  z-index: 1;
+}
+
+.card .dataTables_wrapper .dataTables_info {
+  padding-top: 0.75rem;
+  font-size: 0.875rem;
+  color: #67748e;
+}
+
+.card .dataTables_wrapper .dataTables_paginate {
+  padding-top: 0.5rem;
+}
+
+.card .dataTables_wrapper .dataTables_paginate .paginate_button {
+  padding: 0.35em 0.5em !important;
+}
+
+.card .dataTables_wrapper .dataTables_paginate .paginate_button .dt-pg-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  min-height: 1.25rem;
+}
+
+.card .dataTables_wrapper .dataTables_paginate .paginate_button .dt-pg-icon i {
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+@media (max-width: 767.98px) {
+  .card .dataTables_wrapper .dataTables_length,
+  .card .dataTables_wrapper .dataTables_filter {
+    text-align: left;
+    margin-bottom: 0.75rem;
+  }
+
+  .card .dataTables_wrapper .dataTables_filter {
+    float: none;
+    text-align: left;
+  }
+
+  .card .dataTables_wrapper .dataTables_filter input {
+    max-width: 100%;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 0.35rem;
+  }
+
+  table.dataTable.admin-dt thead th.dt-actions,
+  table.dataTable.admin-dt tbody td.dt-actions {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  /* Drop the primary column min on small screens too */
+  table.dataTable.admin-dt tbody td:first-child {
+    min-width: 0;
+  }
+}
+
+/* Sidebar group menu (Portfolio with collapsible submenu) */
+.sidenav .sidebar-parent-link {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sidenav .sidebar-arrow {
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+}
+
+.sidenav .sidebar-parent-link[aria-expanded="true"] .sidebar-arrow {
+  transform: rotate(180deg);
+}
+
+.sidenav .sidebar-submenu {
+  margin: 0.15rem 0 0.45rem 2.75rem;
+}
+
+.sidenav .sidebar-submenu .nav-link {
+  margin: 0.1rem 0;
+  border-radius: 0.5rem;
+  padding-left: 0.5rem;
+}
+
+.navbar-user-fallback-letter {
+  width: 34px;
+  height: 34px;
+  font-size: 0.8rem !important;
+  line-height: 1;
+}
