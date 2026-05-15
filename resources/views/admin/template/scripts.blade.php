@@ -144,4 +144,78 @@
   });
 </script>
 @stack('scripts')
+<script>
+  // Global Search
+  (function () {
+    document.addEventListener('DOMContentLoaded', function () {
+      var input = document.getElementById('globalSearchInput');
+      var resultsBox = document.getElementById('globalSearchResults');
+      if (!input || !resultsBox) return;
+
+      var debounceTimer = null;
+      var searchUrl = '{{ route("admin.search") }}';
+
+      input.addEventListener('input', function () {
+        var q = this.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (q.length < 2) {
+          resultsBox.style.display = 'none';
+          resultsBox.innerHTML = '';
+          return;
+        }
+
+        debounceTimer = setTimeout(function () {
+          fetch(searchUrl + '?q=' + encodeURIComponent(q), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (!data.results || data.results.length === 0) {
+              resultsBox.innerHTML = '<div style="padding: 1rem; text-align: center; color: #6c757d; font-size: 0.85rem;">Tidak ada hasil untuk "' + q + '"</div>';
+              resultsBox.style.display = 'block';
+              return;
+            }
+
+            var html = '';
+            data.results.forEach(function (item) {
+              html += '<a href="' + item.url + '" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; text-decoration: none; color: #344767; border-bottom: 1px solid #f0f2f5; transition: background 0.15s;" onmouseover="this.style.background=\'#f8f9fa\'" onmouseout="this.style.background=\'transparent\'">';
+              html += '<span style="width: 32px; height: 32px; border-radius: 0.5rem; background: #f0f4ff; display: inline-flex; align-items: center; justify-content: center; color: #4361ee; font-size: 0.8rem; flex-shrink: 0;"><i class="' + item.icon + '"></i></span>';
+              html += '<div style="min-width: 0;"><div style="font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + item.label + '</div>';
+              html += '<div style="font-size: 0.7rem; color: #6c757d;">' + item.description + '</div></div>';
+              html += '</a>';
+            });
+
+            resultsBox.innerHTML = html;
+            resultsBox.style.display = 'block';
+          })
+          .catch(function () { resultsBox.style.display = 'none'; });
+        }, 300);
+      });
+
+      // Close on click outside
+      document.addEventListener('click', function (e) {
+        if (!input.contains(e.target) && !resultsBox.contains(e.target)) {
+          resultsBox.style.display = 'none';
+        }
+      });
+
+      // Close on Escape
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          resultsBox.style.display = 'none';
+          this.blur();
+        }
+      });
+
+      // Keyboard shortcut: Ctrl+K to focus search
+      document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+          e.preventDefault();
+          input.focus();
+        }
+      });
+    });
+  })();
+</script>
 <script src="{{ asset('admin/js/argon-dashboard.min.js') }}"></script>

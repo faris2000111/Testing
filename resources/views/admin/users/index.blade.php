@@ -56,6 +56,14 @@
                     <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-primary me-1">
                       <i class="fa fa-pen"></i>
                     </a>
+                    @if ($user->id !== auth()->id() && auth()->user()->isSuperAdmin() && !session('impersonate_admin_id'))
+                      <form action="{{ route('admin.impersonate.start', $user) }}" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-outline-info me-1" title="Login sebagai {{ $user->name }}">
+                          <i class="fa fa-user-secret"></i>
+                        </button>
+                      </form>
+                    @endif
                     @if ($user->id !== auth()->id())
                       <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="d-inline">
                         @csrf @method('DELETE')

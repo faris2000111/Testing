@@ -152,5 +152,27 @@ class DatabaseSeeder extends Seeder
             'order' => 6,
             'is_system' => true,
         ]);
+
+        AdminMenu::create([
+            'label' => 'Profil Saya',
+            'slug' => 'profile',
+            'icon' => 'fa-user',
+            'icon_gradient' => 'primary',
+            'route_name' => 'admin.profile.edit',
+            'section_id' => $sistem->id,
+            'order' => 7,
+            'is_system' => true,
+        ]);
+
+        AdminMenu::create([
+            'label' => 'Backup Database',
+            'slug' => 'backup',
+            'icon' => 'fa-database',
+            'icon_gradient' => 'dark',
+            'route_name' => 'admin.backup.download',
+            'section_id' => $sistem->id,
+            'order' => 8,
+            'is_system' => true,
+        ]);
     }
 }

@@ -1,4 +1,16 @@
 <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl" id="navbarBlur" data-scroll="false">
+  {{-- Impersonate Banner --}}
+  @if (session('impersonate_admin_id'))
+    <div style="position: absolute; top: -2px; left: 50%; transform: translateX(-50%); z-index: 999;">
+      <form action="{{ route('admin.impersonate.stop') }}" method="POST" class="d-inline">
+        @csrf
+        <button type="submit" class="btn btn-warning btn-sm mb-0 shadow-sm" style="font-size: 0.75rem; padding: 0.3rem 0.75rem;">
+          <i class="fa fa-user-secret me-1"></i> Impersonating {{ auth()->user()->name }} — Klik untuk kembali
+        </button>
+      </form>
+    </div>
+  @endif
+
   <div class="container-fluid py-1 px-3">
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
@@ -18,7 +30,17 @@
     </a>
 
     <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4" id="navbar">
-      <ul class="navbar-nav justify-content-end ms-md-auto align-items-lg-center gap-lg-2">
+      {{-- Global Search --}}
+      <div class="ms-md-auto me-md-3 d-none d-lg-block" style="position: relative; width: 280px;">
+        <div class="input-group">
+          <span class="input-group-text bg-transparent border-0 text-white opacity-6 pe-1"><i class="fa fa-search"></i></span>
+          <input type="text" class="form-control border-0 bg-transparent text-white ps-1" placeholder="Cari menu, user, role..."
+                 id="globalSearchInput" autocomplete="off" style="box-shadow: none;">
+        </div>
+        <div id="globalSearchResults" class="position-absolute w-100 mt-1 shadow-lg rounded-3 overflow-hidden" style="display: none; z-index: 1050; background: #fff; max-height: 400px; overflow-y: auto;"></div>
+      </div>
+
+      <ul class="navbar-nav justify-content-end align-items-lg-center gap-lg-2">
         <li class="nav-item d-flex align-items-center">
           <button type="button"
                   class="btn btn-link nav-link text-white px-2 admin-theme-toggle mb-0"

@@ -1,9 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminMenuController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ImpersonateController;
 use App\Http\Controllers\Admin\PasswordController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SearchController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\Admin\UserController;
@@ -26,7 +30,7 @@ Route::post('/login', [LoginController::class, 'login'])->middleware('guest');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
 // ─── Admin Panel ───
-Route::prefix('admin')->middleware(['auth', 'menu.access'])->name('admin.')->group(function () {
+Route::prefix('admin')->middleware(['auth', 'maintenance', 'menu.access'])->name('admin.')->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::redirect('/', 'admin/dashboard');
@@ -53,4 +57,18 @@ Route::prefix('admin')->middleware(['auth', 'menu.access'])->name('admin.')->gro
 
     // User Manager
     Route::resource('users', UserController::class)->except(['show']);
+
+    // Profile
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    // Backup
+    Route::get('/backup/download', [BackupController::class, 'download'])->name('backup.download');
+
+    // Impersonate
+    Route::post('/impersonate/{user}', [ImpersonateController::class, 'start'])->name('impersonate.start');
+    Route::post('/impersonate-stop', [ImpersonateController::class, 'stop'])->name('impersonate.stop');
+
+    // Global Search
+    Route::get('/search', [SearchController::class, 'search'])->name('search');
 });

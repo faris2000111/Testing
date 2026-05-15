@@ -42,7 +42,7 @@ class AdminMenuServiceProvider extends ServiceProvider
         }
 
         Route::prefix('admin')
-            ->middleware(['web', 'auth', 'menu.access'])
+            ->middleware(['web', 'auth', 'maintenance', 'menu.access'])
             ->name('admin.')
             ->group(function () use ($menus) {
                 foreach ($menus as $menu) {

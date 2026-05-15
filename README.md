@@ -1,122 +1,142 @@
-# Admin Template Starter
+# Laravel Admin Template
 
-Template starter untuk membuat website baru dengan admin panel yang sudah siap pakai. Dibangun dengan **Laravel 13**, **Tailwind CSS v4**, dan **Argon Dashboard**.
+Starter template untuk project website dengan admin panel siap pakai.
 
 ## Fitur
 
-- ✅ Login / Logout authentication
-- ✅ Admin Dashboard dengan activity log
-- ✅ Halaman Settings (identitas, branding, kontak, social media, SEO, tampilan, maintenance)
-- ✅ Ubah password admin
-- ✅ Dark/Light mode toggle
-- ✅ Responsive sidebar navigation
-- ✅ DataTables integration
-- ✅ SweetAlert2 notifications
-- ✅ Activity logging otomatis
+- **Auth** — Login dengan username, role-based access
+- **Dashboard** — Halaman utama admin dengan activity log
+- **Dynamic Menu** — Sidebar menu yang bisa ditambah/hapus dari admin, auto-scaffold controller & views
+- **Section Manager** — Kelola grup/section menu sidebar
+- **Role Manager** — Buat role custom, atur hak akses menu per role
+- **User Manager** — CRUD user dari admin panel
+- **Site Settings** — Identitas, branding, kontak, social media, SEO, AI settings, tampilan, maintenance
+- **AI Settings** — Toggle provider (Gemini/OpenRouter), API key, system prompt
+- **Maintenance Mode** — Block non-admin user, custom animated page
+- **Profile** — Edit nama, username, email, avatar
+- **Backup Database** — Download backup (SQLite/MySQL) dari admin
+- **Activity Log** — Catatan otomatis setiap aksi admin
+- **Error Pages** — Custom 403, 404, 500, 503 dengan animasi
+- **Public Layout** — Base layout untuk halaman publik (navbar, footer, SEO)
 
 ## Instalasi
 
 ```bash
-# Clone / copy project
+# Clone / copy template
+cp -r template/ nama-project/
+cd nama-project
+
+# Install dependencies
 composer install
-npm install
 
 # Setup environment
 cp .env.example .env
 php artisan key:generate
 
-# Database
-php artisan migrate --seed
+# Konfigurasi database di .env
+# DB_CONNECTION=mysql
+# DB_DATABASE=nama_db
+# DB_USERNAME=root
+# DB_PASSWORD=
+
+# Migrate & seed
+php artisan migrate:fresh --seed
+
+# Storage link (untuk upload gambar)
 php artisan storage:link
 
-# Development
-composer dev
-# atau manual:
+# Jalankan
 php artisan serve
-npm run dev
 ```
 
-## Login Default
+## Default Login
 
-| Email | Password |
-|-------|----------|
-| admin@admin.com | password |
+| Username | Password | Role |
+|----------|----------|------|
+| `admin` | `password` | Administrator (Superadmin) |
 
-> ⚠️ Ganti password setelah login pertama kali!
+## Cara Pakai
 
-## Struktur Admin
+### Menambah Menu Baru
+
+1. Buka **Section Manager** → buat section baru jika perlu
+2. Buka **Menu Manager** → klik "Tambah Menu"
+3. Isi label, slug, icon, pilih section
+4. Centang "Generate CRUD" jika butuh halaman create/edit
+5. Simpan → controller dan views otomatis di-generate
+
+### Menambah Role
+
+1. Buka **Role Manager** → "Tambah Role"
+2. Isi nama, label
+3. Centang menu yang boleh diakses
+4. Simpan
+
+### Reset Template (untuk project baru)
+
+```bash
+php artisan template:reset
+```
+
+Ini akan menghapus semua file scaffold dan reset database ke kondisi awal.
+
+## Struktur
 
 ```
 app/
-├── Http/Controllers/
-│   ├── Admin/
-│   │   ├── DashboardController.php
-│   │   ├── SiteSettingController.php
-│   │   └── PasswordController.php
-│   └── Auth/
-│       └── LoginController.php
-├── Models/
-│   ├── ActivityLog.php
-│   ├── SiteSetting.php
-│   └── User.php
-└── View/Components/Admin/
-    ├── PageHeader.php
-    └── EmptyState.php
+├── Console/Commands/     # Artisan commands
+├── Http/
+│   ├── Controllers/Admin/  # Admin controllers
+│   ├── Middleware/          # CheckMenuAccess, CheckMaintenanceMode
+├── Models/                 # Eloquent models
+├── Providers/              # AdminMenuServiceProvider (dynamic routes)
+├── Services/               # MenuScaffolder
+├── View/Components/Admin/  # Blade components
 
 resources/views/
-├── admin/
-│   ├── dashboard/index.blade.php
-│   ├── password/edit.blade.php
-│   ├── settings/edit.blade.php
-│   └── template/
-│       ├── main.blade.php (layout utama)
-│       ├── head.blade.php
-│       ├── sidebar.blade.php
-│       ├── navbar.blade.php
-│       ├── footer.blade.php
-│       └── scripts.blade.php
-├── auth/login.blade.php
-└── components/admin/
-    ├── page-header.blade.php
-    └── empty-state.blade.php
-```
-
-## Cara Menambah Halaman Baru
-
-1. Buat Controller di `app/Http/Controllers/Admin/`
-2. Buat View di `resources/views/admin/nama-fitur/`
-3. Tambah route di `routes/web.php` dalam group `admin`
-4. Tambah link di sidebar: `resources/views/admin/template/sidebar.blade.php`
-
-### Contoh:
-
-```php
-// routes/web.php (dalam group admin)
-Route::resource('products', ProductController::class)->names('admin.products');
-```
-
-```php
-// View extends layout
-@extends('admin.template.main')
-@section('title', 'Products')
-@section('page_title', 'Products')
-@section('content')
-  {{-- konten di sini --}}
-@endsection
+├── admin/                  # Admin panel views
+│   ├── template/           # Layout (main, sidebar, navbar, etc.)
+│   ├── dashboard/
+│   ├── menu/
+│   ├── sections/
+│   ├── roles/
+│   ├── users/
+│   ├── settings/
+│   ├── profile/
+│   └── password/
+├── auth/                   # Login page
+├── errors/                 # Custom error pages (403, 404, 500, 503)
+├── layouts/                # Public frontend layout
+│   ├── app.blade.php
+│   └── partials/
+└── welcome.blade.php
 ```
 
 ## Tech Stack
 
-- PHP 8.3+
-- Laravel 13
-- Tailwind CSS v4
-- Vite 8
-- Argon Dashboard (CSS/JS)
-- jQuery + DataTables
-- SweetAlert2
-- Chart.js
+- Laravel 12
+- Argon Dashboard (admin UI)
 - Font Awesome 6
+- SweetAlert2
+- DataTables
+- jQuery
+
+## Public Frontend
+
+Gunakan layout `layouts.app` untuk halaman publik:
+
+```blade
+@extends('layouts.app')
+
+@section('title', 'Judul Halaman')
+
+@section('content')
+  <div class="container" style="padding: 4rem 0;">
+    <h1>Hello World</h1>
+  </div>
+@endsection
+```
 
 ## License
 
-MIT
+Private template.
