@@ -72,3 +72,5 @@ Route::prefix('admin')->middleware(['auth', 'maintenance', 'menu.access'])->name
     // Global Search
     Route::get('/search', [SearchController::class, 'search'])->name('search');
 });
+
+
