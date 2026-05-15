@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\AdminMenu;
+use App\Models\MenuSection;
+use App\Models\Role;
 use App\Models\SiteSetting;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -11,14 +13,30 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create default admin user
-        User::firstOrCreate(
-            ['email' => 'admin@admin.com'],
+        // Create default roles
+        $adminRole = Role::firstOrCreate(
+            ['name' => 'admin'],
             [
-                'name' => 'Administrator',
-                'password' => bcrypt('password'),
+                'label' => 'Administrator',
+                'is_superadmin' => true,
             ]
         );
+
+        // Create default admin user
+        $user = User::firstOrCreate(
+            ['username' => 'admin'],
+            [
+                'name' => 'Administrator',
+                'email' => 'admin@admin.com',
+                'password' => bcrypt('password'),
+                'role_id' => $adminRole->id,
+            ]
+        );
+
+        // Ensure user has role assigned
+        if (! $user->role_id) {
+            $user->update(['role_id' => $adminRole->id]);
+        }
 
         // Create default site settings
         SiteSetting::firstOrCreate(
@@ -30,8 +48,23 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Create default admin menus
+        // Create sections and menus
+        $this->seedSections();
         $this->seedMenus();
+
+        // Assign all menus to admin role
+        $allMenuIds = AdminMenu::pluck('id')->toArray();
+        $adminRole->menus()->sync($allMenuIds);
+    }
+
+    private function seedSections(): void
+    {
+        if (MenuSection::count() > 0) {
+            return;
+        }
+
+        MenuSection::create(['name' => 'Overview', 'order' => 1]);
+        MenuSection::create(['name' => 'Sistem', 'order' => 99]);
     }
 
     private function seedMenus(): void
@@ -40,13 +73,16 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
+        $overview = MenuSection::where('name', 'Overview')->first();
+        $sistem = MenuSection::where('name', 'Sistem')->first();
+
         AdminMenu::create([
             'label' => 'Dashboard',
             'slug' => 'dashboard',
             'icon' => 'fa-gauge-high',
             'icon_gradient' => 'primary',
             'route_name' => 'admin.dashboard',
-            'section' => 'Overview',
+            'section_id' => $overview->id,
             'order' => 1,
             'is_system' => true,
         ]);
@@ -57,7 +93,7 @@ class DatabaseSeeder extends Seeder
             'icon' => 'fa-gear',
             'icon_gradient' => 'secondary',
             'route_name' => 'admin.settings.edit',
-            'section' => 'Sistem',
+            'section_id' => $sistem->id,
             'order' => 1,
             'is_system' => true,
         ]);
@@ -68,8 +104,41 @@ class DatabaseSeeder extends Seeder
             'icon' => 'fa-bars',
             'icon_gradient' => 'info',
             'route_name' => 'admin.menus.index',
-            'section' => 'Sistem',
+            'section_id' => $sistem->id,
             'order' => 2,
+            'is_system' => true,
+        ]);
+
+        AdminMenu::create([
+            'label' => 'Section Manager',
+            'slug' => 'sections',
+            'icon' => 'fa-layer-group',
+            'icon_gradient' => 'success',
+            'route_name' => 'admin.sections.index',
+            'section_id' => $sistem->id,
+            'order' => 3,
+            'is_system' => true,
+        ]);
+
+        AdminMenu::create([
+            'label' => 'Role Manager',
+            'slug' => 'roles',
+            'icon' => 'fa-shield-halved',
+            'icon_gradient' => 'info',
+            'route_name' => 'admin.roles.index',
+            'section_id' => $sistem->id,
+            'order' => 4,
+            'is_system' => true,
+        ]);
+
+        AdminMenu::create([
+            'label' => 'User Manager',
+            'slug' => 'users',
+            'icon' => 'fa-users',
+            'icon_gradient' => 'primary',
+            'route_name' => 'admin.users.index',
+            'section_id' => $sistem->id,
+            'order' => 5,
             'is_system' => true,
         ]);
 
@@ -79,8 +148,8 @@ class DatabaseSeeder extends Seeder
             'icon' => 'fa-key',
             'icon_gradient' => 'warning',
             'route_name' => 'admin.password.edit',
-            'section' => 'Sistem',
-            'order' => 3,
+            'section_id' => $sistem->id,
+            'order' => 6,
             'is_system' => true,
         ]);
     }

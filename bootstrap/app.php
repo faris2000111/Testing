@@ -12,7 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo('/login');
-        $middleware->redirectUsersTo('/admin');
+        $middleware->redirectUsersTo('/admin/dashboard');
+
+        $middleware->alias([
+            'menu.access' => \App\Http\Middleware\CheckMenuAccess::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

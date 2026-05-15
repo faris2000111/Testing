@@ -17,13 +17,14 @@ return new class extends Migration
             $table->string('icon_gradient')->default('primary');
             $table->string('route_name')->nullable(); // auto-generated or manual
             $table->string('section')->default('Menu');
+            $table->integer('section_order')->default(0);
             $table->integer('order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->boolean('has_crud')->default(false); // apakah punya create/edit/form
             $table->boolean('is_system')->default(false); // menu bawaan, tidak bisa dihapus
             $table->timestamps();
 
-            $table->index(['section', 'order']);
+            $table->index(['section_order', 'section', 'order']);
         });
     }
 

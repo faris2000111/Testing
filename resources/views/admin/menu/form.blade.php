@@ -31,16 +31,16 @@
 
   <div class="col-md-6 mb-3">
     <label class="form-label">Section <span class="text-danger">*</span></label>
-    <input type="text" name="section" class="form-control @error('section') is-invalid @enderror"
-           value="{{ old('section', $isEdit ? $menu->section : '') }}" required
-           placeholder="Konten" list="sectionList">
-    <datalist id="sectionList">
+    <select name="section_id" class="form-select @error('section_id') is-invalid @enderror" required>
+      <option value="">— Pilih Section —</option>
       @foreach ($sections ?? [] as $s)
-        <option value="{{ $s }}">
+        <option value="{{ $s->id }}" {{ old('section_id', $isEdit ? $menu->section_id : '') == $s->id ? 'selected' : '' }}>
+          {{ $s->name }} (urutan: {{ $s->order }})
+        </option>
       @endforeach
-    </datalist>
-    <small class="text-muted">Grup di sidebar. Ketik baru atau pilih yang ada.</small>
-    @error('section')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </select>
+    <small class="text-muted">Grup di sidebar. <a href="{{ route('admin.sections.create') }}" target="_blank">Buat section baru</a></small>
+    @error('section_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
   </div>
 
   <div class="col-md-6 mb-3">
@@ -73,7 +73,7 @@
       <option value="">— Root (tidak punya parent) —</option>
       @foreach ($parentMenus ?? [] as $p)
         <option value="{{ $p->id }}" {{ old('parent_id', $isEdit ? $menu->parent_id : '') == $p->id ? 'selected' : '' }}>
-          {{ $p->label }} ({{ $p->section }})
+          {{ $p->label }} ({{ $p->section->name ?? '-' }})
         </option>
       @endforeach
     </select>

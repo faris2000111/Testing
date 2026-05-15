@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AdminMenu extends Model
@@ -29,6 +30,16 @@ class AdminMenu extends Model
         return $this->hasMany(self::class, 'parent_id')->orderBy('order');
     }
 
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'role_menu');
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(MenuSection::class, 'section_id');
+    }
+
     // ─── Scopes ───
 
     public function scopeActive($query)
@@ -45,23 +56,43 @@ class AdminMenu extends Model
 
     /**
      * Get all menus grouped by section for sidebar rendering.
+     * Filtered by user's role access.
      */
-    public static function getMenuTree(): array
+    public static function getMenuTree(?User $user = null): array
     {
         $menus = self::active()
             ->roots()
-            ->with(['children' => fn ($q) => $q->active()->orderBy('order')])
-            ->orderBy('section')
-            ->orderBy('order')
-            ->get();
+            ->with(['children' => fn ($q) => $q->active()->orderBy('order'), 'section'])
+            ->whereHas('section')
+            ->get()
+            ->sortBy(fn ($m) => ($m->section->order ?? 0) * 10000 + $m->order);
+
+        // Filter menus based on user role
+        if ($user && $user->role) {
+            if (! $user->isSuperAdmin()) {
+                $accessibleMenuIds = $user->role->menus()->pluck('admin_menu_id')->toArray();
+
+                $menus = $menus->filter(function ($menu) use ($accessibleMenuIds) {
+                    return in_array($menu->id, $accessibleMenuIds);
+                });
+
+                // Also filter children
+                $menus->each(function ($menu) use ($accessibleMenuIds) {
+                    $menu->setRelation(
+                        'children',
+                        $menu->children->filter(fn ($child) => in_array($child->id, $accessibleMenuIds))
+                    );
+                });
+            }
+        }
 
         $grouped = [];
         foreach ($menus as $menu) {
-            $section = $menu->section ?: 'Menu';
-            if (! isset($grouped[$section])) {
-                $grouped[$section] = [];
+            $sectionName = $menu->section->name ?? 'Menu';
+            if (! isset($grouped[$sectionName])) {
+                $grouped[$sectionName] = [];
             }
-            $grouped[$section][] = $menu;
+            $grouped[$sectionName][] = $menu;
         }
 
         return $grouped;

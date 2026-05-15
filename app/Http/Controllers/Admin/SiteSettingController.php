@@ -55,6 +55,10 @@ class SiteSettingController extends Controller
             'meta_title' => ['nullable', 'string', 'max:255'],
             'meta_description' => ['nullable', 'string'],
             'meta_keywords' => ['nullable', 'string'],
+            'ai_provider' => ['nullable', 'string', 'in:gemini,openrouter,'],
+            'gemini_api_key' => ['nullable', 'string', 'max:255'],
+            'openrouter_api_key' => ['nullable', 'string', 'max:255'],
+            'ai_system_prompt' => ['nullable', 'string'],
             'maintenance_mode' => ['nullable', 'boolean'],
             'footer_layout' => ['nullable', 'string', Rule::in(['classic', 'minimal', 'split'])],
             'navbar_layout' => ['nullable', 'string', Rule::in(['classic', 'minimal', 'branded'])],
@@ -74,6 +78,17 @@ class SiteSettingController extends Controller
         $validated['maintenance_mode'] = $request->boolean('maintenance_mode');
         $validated['footer_layout'] = $validated['footer_layout'] ?? $setting->footer_layout ?? 'classic';
         $validated['navbar_layout'] = $validated['navbar_layout'] ?? $setting->navbar_layout ?? 'classic';
+
+        // Map ai_system_prompt to chatbot_system_prompt column
+        if (array_key_exists('ai_system_prompt', $validated)) {
+            $validated['chatbot_system_prompt'] = $validated['ai_system_prompt'];
+            unset($validated['ai_system_prompt']);
+        }
+
+        // If ai_provider is empty string, set to null
+        if (empty($validated['ai_provider'])) {
+            $validated['ai_provider'] = null;
+        }
 
         $setting->update($validated);
 

@@ -22,7 +22,7 @@
               <div class="card card-plain">
                 <div class="card-header pb-0 text-start">
                   <h4 class="font-weight-bolder">Sign In</h4>
-                  <p class="mb-0">Masukkan email dan password untuk masuk ke admin panel</p>
+                  <p class="mb-0">Masukkan username dan password untuk masuk ke admin panel</p>
                 </div>
                 <div class="card-body">
                   @if ($errors->any())
@@ -33,7 +33,7 @@
                   <form role="form" method="POST" action="{{ route('login') }}">
                     @csrf
                     <div class="mb-3">
-                      <input type="email" name="email" class="form-control form-control-lg @error('email') is-invalid @enderror" placeholder="Email" aria-label="Email" value="{{ old('email') }}" required autofocus>
+                      <input type="text" name="username" class="form-control form-control-lg @error('username') is-invalid @enderror" placeholder="Username" aria-label="Username" value="{{ old('username') }}" required autofocus>
                     </div>
                     <div class="mb-3">
                       <input type="password" name="password" class="form-control form-control-lg @error('password') is-invalid @enderror" placeholder="Password" aria-label="Password" required>

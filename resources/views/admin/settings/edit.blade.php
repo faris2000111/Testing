@@ -50,6 +50,7 @@
       ['id' => 'contact', 'icon' => 'fa-address-book', 'label' => 'Kontak'],
       ['id' => 'social', 'icon' => 'fa-share-nodes', 'label' => 'Social Media'],
       ['id' => 'seo', 'icon' => 'fa-magnifying-glass-chart', 'label' => 'SEO'],
+      ['id' => 'ai', 'icon' => 'fa-robot', 'label' => 'AI Settings'],
       ['id' => 'appearance', 'icon' => 'fa-palette', 'label' => 'Tampilan'],
       ['id' => 'maintenance', 'icon' => 'fa-screwdriver-wrench', 'label' => 'Maintenance'],
     ];
@@ -227,6 +228,76 @@
                   <label class="form-label">Meta Keywords</label>
                   <input type="text" name="meta_keywords" class="form-control @error('meta_keywords') is-invalid @enderror" value="{{ old('meta_keywords', $setting->meta_keywords) }}" placeholder="keyword1, keyword2, keyword3">
                   @error('meta_keywords')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {{-- AI Settings --}}
+        <section class="settings-section {{ $activeTab === 'ai' ? 'is-active' : '' }}" id="tab-ai">
+          <div class="card section-card border-0 shadow-sm">
+            <div class="card-header">
+              <h5><span class="header-icon" style="--icon-from:#8b5cf6;--icon-to:#6d28d9"><i class="fa fa-robot"></i></span> AI Settings</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                {{-- AI Provider Toggle --}}
+                <div class="col-12 mb-4">
+                  <label class="form-label fw-bold">AI Provider Aktif</label>
+                  <p class="text-sm text-muted mb-2">Pilih salah satu provider. Hanya satu yang bisa aktif.</p>
+                  @php $currentProvider = old('ai_provider', $setting->ai_provider); @endphp
+                  <div class="d-flex gap-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="ai_provider" id="ai_gemini" value="gemini"
+                             {{ $currentProvider === 'gemini' ? 'checked' : '' }}>
+                      <label class="form-check-label fw-bold" for="ai_gemini">
+                        <i class="fa fa-gem text-info me-1"></i> Gemini
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="ai_provider" id="ai_openrouter" value="openrouter"
+                             {{ $currentProvider === 'openrouter' ? 'checked' : '' }}>
+                      <label class="form-check-label fw-bold" for="ai_openrouter">
+                        <i class="fa fa-route text-success me-1"></i> OpenRouter
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="ai_provider" id="ai_off" value=""
+                             {{ empty($currentProvider) ? 'checked' : '' }}>
+                      <label class="form-check-label fw-bold" for="ai_off">
+                        <i class="fa fa-power-off text-danger me-1"></i> Nonaktif
+                      </label>
+                    </div>
+                  </div>
+                  @error('ai_provider')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                </div>
+
+                {{-- Gemini API Key --}}
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Gemini API Key</label>
+                  <input type="password" name="gemini_api_key" class="form-control @error('gemini_api_key') is-invalid @enderror"
+                         value="{{ old('gemini_api_key', $setting->gemini_api_key) }}" placeholder="AIza...">
+                  <small class="text-muted">Dapatkan dari <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a></small>
+                  @error('gemini_api_key')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                {{-- OpenRouter API Key --}}
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">OpenRouter API Key</label>
+                  <input type="password" name="openrouter_api_key" class="form-control @error('openrouter_api_key') is-invalid @enderror"
+                         value="{{ old('openrouter_api_key', $setting->openrouter_api_key) }}" placeholder="sk-or-...">
+                  <small class="text-muted">Dapatkan dari <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a></small>
+                  @error('openrouter_api_key')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+
+                {{-- AI System Prompt --}}
+                <div class="col-12 mb-1">
+                  <label class="form-label">Instruksi AI (System Prompt)</label>
+                  <textarea name="ai_system_prompt" class="form-control @error('ai_system_prompt') is-invalid @enderror"
+                            rows="5" placeholder="Kamu adalah asisten AI yang membantu...">{{ old('ai_system_prompt', $setting->chatbot_system_prompt) }}</textarea>
+                  <small class="text-muted">Instruksi dasar untuk AI. Tentukan perilaku, gaya bahasa, dan batasan AI di sini.</small>
+                  @error('ai_system_prompt')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
               </div>
             </div>

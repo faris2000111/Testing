@@ -4,8 +4,8 @@
 
     $sitePublicUrl = url('/');
 
-    // Load dynamic menus from database
-    $menuTree = Schema::hasTable('admin_menus') ? AdminMenu::getMenuTree() : [];
+    // Load dynamic menus from database, filtered by user role
+    $menuTree = Schema::hasTable('admin_menus') ? AdminMenu::getMenuTree(auth()->user()) : [];
 @endphp
 
 <aside class="sidenav admin-sidenav navbar navbar-vertical navbar-expand-xs border-0 border-radius-xl my-3 fixed-start ms-4" id="sidenav-main">

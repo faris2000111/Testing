@@ -57,7 +57,7 @@
         <x-admin.empty-state icon="fa-bars" title="Belum ada menu" description="Klik tombol Tambah Menu untuk membuat menu sidebar pertama." />
       @else
         @php
-          $grouped = $menus->groupBy('section');
+          $grouped = $menus->groupBy(fn ($m) => $m->section->name ?? 'Menu');
         @endphp
         @foreach ($grouped as $section => $items)
           <div class="section-header">{{ $section }}</div>
