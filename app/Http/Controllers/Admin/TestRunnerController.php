@@ -105,7 +105,6 @@ class TestRunnerController extends Controller
 
     /**
      * Fetch CSRF token from the target website.
-     * Tries common pages: /login, /, or any page that returns a form with _token.
      */
     private function fetchCsrfToken(TestProject $project): void
     {
@@ -116,7 +115,10 @@ class TestRunnerController extends Controller
                 $url = $project->getFullUrl($page);
                 $response = Http::timeout(15)
                     ->withoutVerifying()
-                    ->withOptions(['cookies' => $this->cookieJar])
+                    ->withOptions([
+                        'cookies' => $this->cookieJar,
+                        'allow_redirects' => true,
+                    ])
                     ->get($url);
 
                 if ($response->successful()) {
@@ -134,7 +136,6 @@ class TestRunnerController extends Controller
 
     /**
      * Extract CSRF token from HTML response.
-     * Looks for meta tag or hidden input field.
      */
     private function extractCsrfToken(string $html): ?string
     {
@@ -148,7 +149,7 @@ class TestRunnerController extends Controller
             return $matches[1];
         }
 
-        // Try reversed attribute order: <input type="hidden" value="..." name="_token">
+        // Try reversed attribute order
         if (preg_match('/<input[^>]+value=["\']([^"\']+)["\'][^>]+name=["\']_token["\']/i', $html, $matches)) {
             return $matches[1];
         }
@@ -165,7 +166,10 @@ class TestRunnerController extends Controller
             $url = $project->getFullUrl($endpoint);
             $response = Http::timeout(15)
                 ->withoutVerifying()
-                ->withOptions(['cookies' => $this->cookieJar])
+                ->withOptions([
+                    'cookies' => $this->cookieJar,
+                    'allow_redirects' => true,
+                ])
                 ->get($url);
 
             if ($response->successful()) {
@@ -195,7 +199,11 @@ class TestRunnerController extends Controller
 
             $request = Http::timeout(30)
                 ->withoutVerifying()
-                ->withOptions(['cookies' => $this->cookieJar]);
+                ->withOptions([
+                    'cookies' => $this->cookieJar,
+                    // IMPORTANT: Don't follow redirects so we can capture the actual status code
+                    'allow_redirects' => false,
+                ]);
 
             // Add custom headers
             if (! empty($case->headers)) {
@@ -205,7 +213,6 @@ class TestRunnerController extends Controller
             // Prepare body params with CSRF token for non-GET requests
             $bodyParams = $case->body_params ?? [];
             if (in_array($case->method, ['POST', 'PUT', 'PATCH', 'DELETE']) && $this->csrfToken) {
-                // Only inject _token if not already provided in body_params
                 if (! isset($bodyParams['_token'])) {
                     $bodyParams['_token'] = $this->csrfToken;
                 }
@@ -224,29 +231,35 @@ class TestRunnerController extends Controller
             $responseTime = (microtime(true) - $startTime) * 1000;
             $actualStatus = $response->status();
             $responseBody = $response->body();
+            $redirectUrl = $response->header('Location');
 
-            // After a successful POST, try to extract new CSRF token from response
-            // (in case the page returns a new form)
-            if (in_array($case->method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
-                $newToken = $this->extractCsrfToken($responseBody);
-                if ($newToken) {
-                    $this->csrfToken = $newToken;
-                }
+            // If it's a redirect and we need to check the final page content,
+            // follow the redirect manually to get the response body
+            $finalBody = $responseBody;
+            if (in_array($actualStatus, [301, 302, 303, 307, 308]) && $redirectUrl) {
+                $finalBody = $this->followRedirectForBody($redirectUrl, $project);
             }
 
             // Determine pass/fail
             $status = 'passed';
             $errorMessage = null;
 
-            // Check status code (also accept redirects as success if expected)
+            // Check status code
             if ($actualStatus !== $case->expected_status) {
                 $status = 'failed';
                 $errorMessage = "Expected status {$case->expected_status}, got {$actualStatus}.";
+
+                // Add redirect info for clarity
+                if ($redirectUrl) {
+                    $errorMessage .= " (Redirect to: {$redirectUrl})";
+                }
             }
 
-            // Check expected content
+            // Check expected content (use final body after redirect if available)
+            $bodyToCheck = ! empty($finalBody) ? $finalBody : $responseBody;
+
             if ($status === 'passed' && ! empty($case->expected_contains)) {
-                if (stripos($responseBody, $case->expected_contains) === false) {
+                if (stripos($bodyToCheck, $case->expected_contains) === false) {
                     $status = 'failed';
                     $errorMessage = "Response tidak mengandung teks: \"{$case->expected_contains}\".";
                 }
@@ -254,14 +267,14 @@ class TestRunnerController extends Controller
 
             // Check content that should NOT be present
             if ($status === 'passed' && ! empty($case->expected_not_contains)) {
-                if (stripos($responseBody, $case->expected_not_contains) !== false) {
+                if (stripos($bodyToCheck, $case->expected_not_contains) !== false) {
                     $status = 'failed';
                     $errorMessage = "Response mengandung teks yang tidak diharapkan: \"{$case->expected_not_contains}\".";
                 }
             }
 
             // Store result (truncate body to avoid huge DB entries)
-            $storedBody = mb_substr($responseBody, 0, 5000);
+            $storedBody = mb_substr($bodyToCheck, 0, 5000);
 
             TestResult::create([
                 'test_run_id' => $testRun->id,
@@ -304,6 +317,39 @@ class TestRunnerController extends Controller
                 'response_time_ms' => round($responseTime, 2),
                 'error_message' => $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Follow a redirect URL to get the final page body (for content checking).
+     */
+    private function followRedirectForBody(string $redirectUrl, TestProject $project): string
+    {
+        try {
+            // If redirect URL is relative, make it absolute
+            if (str_starts_with($redirectUrl, '/')) {
+                $redirectUrl = rtrim($project->base_url, '/') . $redirectUrl;
+            }
+
+            $response = Http::timeout(15)
+                ->withoutVerifying()
+                ->withOptions([
+                    'cookies' => $this->cookieJar,
+                    'allow_redirects' => true,
+                ])
+                ->get($redirectUrl);
+
+            $body = $response->body();
+
+            // Update CSRF token from the redirected page
+            $token = $this->extractCsrfToken($body);
+            if ($token) {
+                $this->csrfToken = $token;
+            }
+
+            return $body;
+        } catch (\Exception) {
+            return '';
         }
     }
 }
