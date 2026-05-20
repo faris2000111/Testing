@@ -401,6 +401,16 @@ PENTING: Kamu HARUS merespons dalam format JSON yang valid dengan struktur berik
 - expected_not_contains: HANYA isi jika kamu YAKIN teks tersebut TIDAK boleh ada. Jika ragu, set null
 - Generate 3-10 test cases yang relevan
 - Sertakan positive test (happy path) dan negative test (error handling)
+- URUTAN TEST CASE SANGAT PENTING! Untuk CRUD, SELALU gunakan urutan ini:
+  1. Login dulu (jika butuh auth)
+  2. GET halaman index (list data)
+  3. GET halaman create (form)
+  4. POST create data baru (store)
+  5. GET halaman edit (form edit)
+  6. PUT/PATCH update data
+  7. DELETE hapus data (SELALU DI AKHIR)
+  8. Negative tests (validasi gagal, akses tanpa login, dll)
+- DELETE harus SELALU di urutan paling akhir supaya data yang di-create/update masih ada saat di-test
 - Jangan tambahkan teks apapun di luar JSON
 - Pastikan JSON valid dan bisa di-parse
 PROMPT;
