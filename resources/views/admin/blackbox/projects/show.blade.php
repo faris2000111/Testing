@@ -35,9 +35,18 @@
         <small class="text-muted">— Deskripsikan fitur/halaman, test cases langsung tersimpan ke project.</small>
       </div>
       <div class="row g-2">
-        <div class="col-12">
+        <div class="col-md-8">
           <label class="form-label text-xs mb-1">Prompt</label>
           <textarea id="aiBlackboxPrompt" class="form-control form-control-sm" rows="2">Generate test cases untuk halaman login</textarea>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-xs mb-1">Simpan ke Suite</label>
+          <select id="aiBlackboxSuite" class="form-select form-select-sm">
+            <option value="">— Tanpa Suite —</option>
+            @foreach ($project->testSuites as $suite)
+              <option value="{{ $suite->id }}">{{ $suite->name }}</option>
+            @endforeach
+          </select>
         </div>
         <div class="col-12">
           <label class="form-label text-xs mb-1">Konteks Tambahan</label>
@@ -433,6 +442,8 @@ function generateBlackboxCases() {
 }
 
 function saveGeneratedCases(cases, btn) {
+  var suiteId = document.getElementById('aiBlackboxSuite').value;
+
   var promises = cases.map(function(c) {
     var formData = new FormData();
     formData.append('_token', '{{ csrf_token() }}');
@@ -444,6 +455,7 @@ function saveGeneratedCases(cases, btn) {
     formData.append('expected_contains', c.expected_contains || '');
     formData.append('expected_not_contains', c.expected_not_contains || '');
     formData.append('is_active', '1');
+    if (suiteId) formData.append('test_suite_id', suiteId);
     if (c.headers) formData.append('headers', JSON.stringify(c.headers));
     if (c.body_params) formData.append('body_params', JSON.stringify(c.body_params));
 
