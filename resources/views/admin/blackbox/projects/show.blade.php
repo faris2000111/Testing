@@ -10,10 +10,13 @@
     :title="$project->name"
     :description="$project->description ?? 'Blackbox testing untuk ' . $project->base_url"
   >
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
       <button type="button" class="btn btn-success btn-sm mb-0" id="btnRunTests" onclick="runTests()">
-        <i class="fa fa-play me-1"></i> Jalankan Semua Test
+        <i class="fa fa-play me-1"></i> Run Semua
       </button>
+      <a href="{{ route('admin.blackbox.projects.suites.create', $project) }}" class="btn btn-info btn-sm mb-0">
+        <i class="fa fa-folder-plus me-1"></i> Tambah Suite
+      </a>
       <a href="{{ route('admin.blackbox.projects.cases.create', $project) }}" class="btn btn-primary btn-sm mb-0">
         <i class="fa fa-plus me-1"></i> Tambah Test Case
       </a>
@@ -31,12 +34,21 @@
         <strong class="text-sm">AI Generate</strong>
         <small class="text-muted">— Deskripsikan fitur/halaman, test cases langsung tersimpan ke project.</small>
       </div>
-      <div class="d-flex gap-2">
-        <textarea id="aiBlackboxPrompt" class="form-control form-control-sm" rows="2"
-          placeholder="Contoh: Generate test cases untuk halaman login, register, forgot password, dan halaman profil" style="flex: 1;"></textarea>
-        <button type="button" class="btn btn-sm align-self-end" style="background: #8b5cf6; color: white; white-space: nowrap;" onclick="generateBlackboxCases()" id="btnAiBlackbox">
-          <i class="fa fa-wand-magic-sparkles me-1"></i> Generate & Simpan
-        </button>
+      <div class="row g-2">
+        <div class="col-12">
+          <label class="form-label text-xs mb-1">Prompt</label>
+          <textarea id="aiBlackboxPrompt" class="form-control form-control-sm" rows="2">Generate test cases untuk halaman login</textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label text-xs mb-1">Konteks Tambahan</label>
+          <textarea id="aiBlackboxContext" class="form-control form-control-sm" rows="2">Login pakai username dan password. Pesan error kalau gagal: "Username atau password salah". Setelah berhasil redirect ke /admin/dashboard yang ada teks "Dashboard".</textarea>
+          <small class="text-muted">Tambahkan info spesifik tentang website target supaya AI lebih akurat.</small>
+        </div>
+        <div class="col-12">
+          <button type="button" class="btn btn-sm" style="background: #8b5cf6; color: white;" onclick="generateBlackboxCases()" id="btnAiBlackbox">
+            <i class="fa fa-wand-magic-sparkles me-1"></i> Generate & Simpan
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -113,22 +125,88 @@
     </div>
   </div>
 
-  {{-- Test Cases --}}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-header pb-0 d-flex justify-content-between align-items-center">
-      <div>
-        <h6 class="mb-0"><i class="fa fa-list-check me-1 text-primary"></i> Test Cases</h6>
-        <small class="text-muted">Daftar skenario testing yang akan dijalankan.</small>
+  {{-- Test Cases grouped by Suite --}}
+  @php
+    $unsuitedCases = $project->testCases->whereNull('test_suite_id');
+    $suites = $project->testSuites;
+  @endphp
+
+  @foreach ($suites as $suite)
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header pb-0 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="mb-0">
+            <i class="fa fa-folder me-1 text-info"></i> {{ $suite->name }}
+            <span class="badge bg-gradient-secondary ms-1">{{ $suite->testCases->count() }} cases</span>
+          </h6>
+          @if ($suite->description)
+            <small class="text-muted">{{ $suite->description }}</small>
+          @endif
+        </div>
+        <div class="d-flex gap-1">
+          <button type="button" class="btn btn-xs btn-success" onclick="runTests({{ $suite->id }})" title="Run suite ini">
+            <i class="fa fa-play"></i>
+          </button>
+          <a href="{{ route('admin.blackbox.projects.suites.edit', [$project, $suite]) }}" class="btn btn-xs btn-outline-primary" title="Edit suite">
+            <i class="fa fa-pen"></i>
+          </a>
+          <form action="{{ route('admin.blackbox.projects.suites.destroy', [$project, $suite]) }}" method="POST" class="d-inline">
+            @csrf @method('DELETE')
+            <button type="button" class="btn btn-xs btn-outline-danger btn-delete-swal" data-title="Hapus suite {{ $suite->name }}?">
+              <i class="fa fa-trash"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+      <div class="card-body">
+        @if ($suite->testCases->isEmpty())
+          <p class="text-muted text-sm mb-0">Belum ada test case di suite ini.</p>
+        @else
+          <div class="table-responsive">
+            <table class="table align-items-center mb-0">
+              <thead>
+                <tr>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">#</th>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Method</th>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Endpoint</th>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Title</th>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Expected</th>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach ($suite->testCases as $case)
+                  <tr>
+                    <td class="ps-4">{{ $loop->iteration }}</td>
+                    <td><span class="badge bg-gradient-{{ $case->getMethodBadgeColor() }}">{{ $case->method }}</span></td>
+                    <td><code class="text-xs">{{ $case->endpoint }}</code></td>
+                    <td><span class="text-sm font-weight-bold">{{ $case->title }}</span></td>
+                    <td><code>{{ $case->expected_status }}</code></td>
+                    <td>
+                      <a href="{{ route('admin.blackbox.projects.cases.edit', [$project, $case]) }}" class="btn btn-sm btn-outline-primary me-1"><i class="fa fa-pen"></i></a>
+                      <form action="{{ route('admin.blackbox.projects.cases.destroy', [$project, $case]) }}" method="POST" class="d-inline">
+                        @csrf @method('DELETE')
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-swal"><i class="fa fa-trash"></i></button>
+                      </form>
+                    </td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+        @endif
       </div>
     </div>
-    <div class="card-body">
-      @if ($project->testCases->isEmpty())
-        <x-admin.empty-state
-          icon="fa-list-check"
-          title="Belum ada test case"
-          description="Tambahkan test case untuk mulai testing."
-        />
-      @else
+  @endforeach
+
+  {{-- Unsorted test cases (no suite) --}}
+  @if ($unsuitedCases->isNotEmpty())
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header pb-0">
+        <h6 class="mb-0"><i class="fa fa-list-check me-1 text-secondary"></i> Tanpa Suite</h6>
+        <small class="text-muted">Test cases yang belum dimasukkan ke suite manapun.</small>
+      </div>
+      <div class="card-body">
         <div class="table-responsive">
           <table class="table align-items-center mb-0">
             <thead>
@@ -138,36 +216,22 @@
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Endpoint</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Title</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Expected</th>
-                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              @foreach ($project->testCases as $case)
+              @foreach ($unsuitedCases as $case)
                 <tr>
                   <td class="ps-4">{{ $loop->iteration }}</td>
-                  <td>
-                    <span class="badge bg-gradient-{{ $case->getMethodBadgeColor() }}">{{ $case->method }}</span>
-                  </td>
+                  <td><span class="badge bg-gradient-{{ $case->getMethodBadgeColor() }}">{{ $case->method }}</span></td>
                   <td><code class="text-xs">{{ $case->endpoint }}</code></td>
                   <td><span class="text-sm font-weight-bold">{{ $case->title }}</span></td>
                   <td><code>{{ $case->expected_status }}</code></td>
                   <td>
-                    @if ($case->is_active)
-                      <span class="badge bg-gradient-success">Active</span>
-                    @else
-                      <span class="badge bg-gradient-secondary">Inactive</span>
-                    @endif
-                  </td>
-                  <td>
-                    <a href="{{ route('admin.blackbox.projects.cases.edit', [$project, $case]) }}" class="btn btn-sm btn-outline-primary me-1">
-                      <i class="fa fa-pen"></i>
-                    </a>
+                    <a href="{{ route('admin.blackbox.projects.cases.edit', [$project, $case]) }}" class="btn btn-sm btn-outline-primary me-1"><i class="fa fa-pen"></i></a>
                     <form action="{{ route('admin.blackbox.projects.cases.destroy', [$project, $case]) }}" method="POST" class="d-inline">
                       @csrf @method('DELETE')
-                      <button type="button" class="btn btn-sm btn-outline-danger btn-delete-swal" data-title="Hapus test case {{ $case->title }}?">
-                        <i class="fa fa-trash"></i>
-                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-danger btn-delete-swal"><i class="fa fa-trash"></i></button>
                     </form>
                   </td>
                 </tr>
@@ -175,9 +239,21 @@
             </tbody>
           </table>
         </div>
-      @endif
+      </div>
     </div>
-  </div>
+  @endif
+
+  @if ($suites->isEmpty() && $unsuitedCases->isEmpty())
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <x-admin.empty-state
+          icon="fa-list-check"
+          title="Belum ada test case"
+          description="Buat suite terlebih dahulu, lalu tambahkan test case ke dalamnya."
+        />
+      </div>
+    </div>
+  @endif
 
   {{-- Test Run History --}}
   @if ($project->testRuns->isNotEmpty())
@@ -193,6 +269,7 @@
               <tr>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-3">Waktu</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">User</th>
+                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Suite</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Passed</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Failed</th>
@@ -205,6 +282,13 @@
                 <tr>
                   <td class="ps-3 text-sm">{{ $run->created_at->format('d M Y H:i') }}</td>
                   <td class="text-sm">{{ $run->user?->name ?? '—' }}</td>
+                  <td>
+                    @if ($run->testSuite)
+                      <span class="badge bg-gradient-info">{{ $run->testSuite->name }}</span>
+                    @else
+                      <span class="badge bg-gradient-dark">Semua</span>
+                    @endif
+                  </td>
                   <td>
                     <span class="badge bg-gradient-{{ $run->getStatusBadge() }}">{{ $run->getStatusLabel() }}</span>
                   </td>
@@ -228,16 +312,20 @@
 
 @push('scripts')
 <script>
-function runTests() {
-  var btn = document.getElementById('btnRunTests');
+function runTests(suiteId) {
+  var btn = suiteId ? event.target.closest('button') : document.getElementById('btnRunTests');
   var panel = document.getElementById('testResultsPanel');
   var body = document.getElementById('testResultsBody');
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Running...';
+  var origHtml = btn.innerHTML;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>';
 
   panel.classList.remove('d-none');
   body.innerHTML = '<div class="text-center py-4"><i class="fa fa-spinner fa-spin fa-2x text-info"></i><p class="mt-2 text-muted">Menjalankan test cases...</p></div>';
+
+  var payload = {};
+  if (suiteId) payload.suite_id = suiteId;
 
   fetch('{{ route("admin.blackbox.projects.run", $project) }}', {
     method: 'POST',
@@ -246,12 +334,13 @@ function runTests() {
       'Content-Type': 'application/json',
       'X-CSRF-TOKEN': '{{ csrf_token() }}',
       'X-Requested-With': 'XMLHttpRequest'
-    }
+    },
+    body: JSON.stringify(payload)
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa fa-play me-1"></i> Jalankan Semua Test';
+    btn.innerHTML = origHtml;
 
     if (!data.success) {
       body.innerHTML = '<div class="alert alert-warning mb-0">' + data.message + '</div>';
@@ -286,7 +375,7 @@ function runTests() {
   })
   .catch(function(err) {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa fa-play me-1"></i> Jalankan Semua Test';
+    btn.innerHTML = origHtml;
     body.innerHTML = '<div class="alert alert-danger mb-0">Terjadi error: ' + err.message + '</div>';
   });
 }
@@ -298,6 +387,12 @@ function generateBlackboxCases() {
   if (!prompt) {
     Swal.fire({ icon: 'warning', title: 'Prompt kosong', text: 'Masukkan deskripsi fitur/halaman yang ingin di-test.' });
     return;
+  }
+
+  var context = document.getElementById('aiBlackboxContext').value.trim();
+  var fullPrompt = prompt;
+  if (context) {
+    fullPrompt += '\n\nKonteks tambahan dari user:\n' + context;
   }
 
   var btn = document.getElementById('btnAiBlackbox');
@@ -312,7 +407,7 @@ function generateBlackboxCases() {
       'Accept': 'application/json'
     },
     body: JSON.stringify({
-      prompt: prompt,
+      prompt: fullPrompt,
       project_name: '{{ $project->name }}',
       base_url: '{{ $project->base_url }}'
     })

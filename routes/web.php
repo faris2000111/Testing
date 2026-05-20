@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\Admin\TestCaseController;
 use App\Http\Controllers\Admin\TestProjectController;
 use App\Http\Controllers\Admin\TestRunnerController;
+use App\Http\Controllers\Admin\TestSuiteController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Support\Facades\Route;
@@ -90,6 +91,13 @@ Route::prefix('admin')->middleware(['auth', 'maintenance', 'menu.access'])->name
         Route::get('/projects/{project}/cases/{case}/edit', [TestCaseController::class, 'edit'])->name('projects.cases.edit');
         Route::put('/projects/{project}/cases/{case}', [TestCaseController::class, 'update'])->name('projects.cases.update');
         Route::delete('/projects/{project}/cases/{case}', [TestCaseController::class, 'destroy'])->name('projects.cases.destroy');
+
+        // Test Suites
+        Route::get('/projects/{project}/suites/create', [TestSuiteController::class, 'create'])->name('projects.suites.create');
+        Route::post('/projects/{project}/suites', [TestSuiteController::class, 'store'])->name('projects.suites.store');
+        Route::get('/projects/{project}/suites/{suite}/edit', [TestSuiteController::class, 'edit'])->name('projects.suites.edit');
+        Route::put('/projects/{project}/suites/{suite}', [TestSuiteController::class, 'update'])->name('projects.suites.update');
+        Route::delete('/projects/{project}/suites/{suite}', [TestSuiteController::class, 'destroy'])->name('projects.suites.destroy');
     });
 
     // Manual Testing

@@ -25,11 +25,18 @@ class TestRunnerController extends Controller
     private ?string $csrfToken = null;
 
     /**
-     * Run all active test cases for a project.
+     * Run all active test cases for a project (optionally filtered by suite).
      */
-    public function run(TestProject $project): JsonResponse
+    public function run(Request $request, TestProject $project): JsonResponse
     {
-        $cases = $project->activeCases()->get();
+        $suiteId = $request->input('suite_id');
+
+        if ($suiteId) {
+            $suite = $project->testSuites()->findOrFail($suiteId);
+            $cases = $suite->activeCases()->get();
+        } else {
+            $cases = $project->activeCases()->get();
+        }
 
         if ($cases->isEmpty()) {
             return response()->json([
@@ -50,6 +57,7 @@ class TestRunnerController extends Controller
         // Create a test run record
         $testRun = TestRun::create([
             'test_project_id' => $project->id,
+            'test_suite_id' => $suiteId ?? null,
             'user_id' => auth()->id(),
             'status' => 'running',
             'total_cases' => $cases->count(),
@@ -80,7 +88,8 @@ class TestRunnerController extends Controller
             'duration_ms' => round($duration, 2),
         ]);
 
-        ActivityLog::record('created', $testRun, "Menjalankan blackbox test: {$project->name} ({$passed}/{$cases->count()} passed)");
+        $label = isset($suite) ? $suite->name : $project->name;
+        ActivityLog::record('created', $testRun, "Menjalankan blackbox test: {$label} ({$passed}/{$cases->count()} passed)");
 
         return response()->json([
             'success' => true,
@@ -279,6 +288,10 @@ class TestRunnerController extends Controller
             TestResult::create([
                 'test_run_id' => $testRun->id,
                 'test_case_id' => $case->id,
+                'snapshot_title' => $case->title,
+                'snapshot_method' => $case->method,
+                'snapshot_endpoint' => $case->endpoint,
+                'snapshot_expected_status' => $case->expected_status,
                 'status' => $status,
                 'actual_status' => $actualStatus,
                 'response_body' => $storedBody,
@@ -301,6 +314,10 @@ class TestRunnerController extends Controller
             TestResult::create([
                 'test_run_id' => $testRun->id,
                 'test_case_id' => $case->id,
+                'snapshot_title' => $case->title,
+                'snapshot_method' => $case->method,
+                'snapshot_endpoint' => $case->endpoint,
+                'snapshot_expected_status' => $case->expected_status,
                 'status' => 'error',
                 'actual_status' => null,
                 'response_body' => null,

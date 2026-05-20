@@ -116,20 +116,20 @@
             @foreach ($run->results as $result)
               <tr>
                 <td class="ps-3">{{ $loop->iteration }}</td>
-                <td class="text-sm font-weight-bold">{{ $result->testCase?->title ?? '—' }}</td>
+                <td class="text-sm font-weight-bold">{{ $result->getTitle() }}</td>
                 <td>
-                  @if ($result->testCase)
-                    <span class="badge bg-gradient-{{ $result->testCase->getMethodBadgeColor() }}">{{ $result->testCase->method }}</span>
+                  @if ($result->getMethod())
+                    <span class="badge bg-gradient-{{ $result->getMethodBadgeColor() }}">{{ $result->getMethod() }}</span>
                   @endif
                 </td>
-                <td><code class="text-xs">{{ $result->testCase?->endpoint ?? '—' }}</code></td>
+                <td><code class="text-xs">{{ $result->getEndpoint() ?? '—' }}</code></td>
                 <td>
                   <span class="badge bg-gradient-{{ $result->getStatusBadge() }}">{{ strtoupper($result->status) }}</span>
                 </td>
                 <td>
                   <code>{{ $result->actual_status ?? '—' }}</code>
                   <span class="text-muted">/</span>
-                  <code>{{ $result->testCase?->expected_status ?? '—' }}</code>
+                  <code>{{ $result->getExpectedStatus() ?? '—' }}</code>
                 </td>
                 <td class="text-sm">{{ $result->response_time_ms ? number_format($result->response_time_ms, 0) . ' ms' : '—' }}</td>
                 <td class="text-sm text-danger">{{ $result->error_message ?? '—' }}</td>

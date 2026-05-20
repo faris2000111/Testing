@@ -24,8 +24,7 @@
         <small class="text-muted">— Deskripsikan fitur yang ingin di-test, form akan terisi otomatis.</small>
       </div>
       <div class="d-flex gap-2">
-        <textarea id="aiPrompt" class="form-control form-control-sm" rows="2"
-          placeholder="Contoh: Test fitur login dengan email dan password, termasuk validasi error dan forgot password" style="flex: 1;"></textarea>
+        <textarea id="aiPrompt" class="form-control form-control-sm" rows="2" style="flex: 1;">Test fitur login dengan username dan password, termasuk validasi error ketika field kosong dan ketika credential salah</textarea>
         <button type="button" class="btn btn-sm align-self-end" style="background: #8b5cf6; color: white; white-space: nowrap;" onclick="generateWithAi()" id="btnGenerate">
           <i class="fa fa-wand-magic-sparkles me-1"></i> Generate
         </button>

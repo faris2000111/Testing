@@ -27,6 +27,11 @@ class TestCase extends Model
         return $this->belongsTo(TestProject::class);
     }
 
+    public function testSuite(): BelongsTo
+    {
+        return $this->belongsTo(TestSuite::class);
+    }
+
     public function testResults(): HasMany
     {
         return $this->hasMany(TestResult::class);

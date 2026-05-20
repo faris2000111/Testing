@@ -20,6 +20,11 @@ class TestProject extends Model
         return $this->hasMany(TestCase::class)->orderBy('order');
     }
 
+    public function testSuites(): HasMany
+    {
+        return $this->hasMany(TestSuite::class)->orderBy('order');
+    }
+
     public function testRuns(): HasMany
     {
         return $this->hasMany(TestRun::class)->latest();

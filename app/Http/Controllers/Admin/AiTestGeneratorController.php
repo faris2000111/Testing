@@ -261,10 +261,25 @@ class AiTestGeneratorController extends Controller
         }
 
         return <<<PROMPT
-Kamu adalah QA Engineer yang ahli dalam membuat test scenario untuk blackbox testing website.
+Kamu adalah QA Engineer yang ahli dalam membuat test scenario untuk blackbox testing website berbasis Laravel/PHP.
 {$projectInfo}
 
-Tugas kamu adalah menghasilkan test scenario berdasarkan deskripsi user.
+## KONTEKS PENTING
+
+Website target menggunakan framework Laravel dengan perilaku berikut:
+- Form submission (login, register, CRUD) menggunakan POST dengan redirect 302
+- Login gagal: redirect back ke halaman login dengan pesan error
+- Login berhasil: redirect ke halaman dashboard
+- Validasi gagal: redirect back ke form dengan pesan error
+- CRUD berhasil: redirect ke halaman index dengan flash message "berhasil"
+- Halaman yang butuh login: redirect ke /login
+- CSRF token otomatis di-handle oleh tool testing
+
+## TUGAS
+
+Menghasilkan test scenario manual berdasarkan deskripsi user.
+
+## FORMAT RESPONSE
 
 PENTING: Kamu HARUS merespons dalam format JSON yang valid dengan struktur berikut:
 {
@@ -282,12 +297,16 @@ PENTING: Kamu HARUS merespons dalam format JSON yang valid dengan struktur berik
   ]
 }
 
-Aturan:
+## ATURAN
 - Gunakan bahasa Indonesia untuk semua field
 - Priority harus salah satu dari: low, medium, high, critical
 - Steps minimal 3, maksimal 15 langkah
 - Setiap step harus jelas dan spesifik
-- Expected result harus bisa diverifikasi secara visual
+- Expected result harus realistis sesuai perilaku Laravel:
+  - Login berhasil → "User diarahkan ke halaman Dashboard"
+  - Login gagal → "Muncul pesan error di halaman login"
+  - Form validasi gagal → "Muncul pesan error validasi di bawah field"
+  - CRUD berhasil → "Muncul notifikasi berhasil dan data tampil di tabel"
 - Test data berisi contoh data yang realistis
 - Jangan tambahkan teks apapun di luar JSON
 - Pastikan JSON valid dan bisa di-parse
@@ -308,10 +327,51 @@ PROMPT;
         }
 
         return <<<PROMPT
-Kamu adalah QA Engineer yang ahli dalam membuat automated blackbox test cases untuk website.
+Kamu adalah QA Engineer yang ahli dalam membuat automated blackbox test cases untuk website berbasis Laravel/PHP.
 {$projectInfo}
 
-Tugas kamu adalah menghasilkan daftar HTTP test cases berdasarkan deskripsi user.
+## KONTEKS PENTING TENTANG TOOL TESTING INI
+
+Tool testing ini bekerja dengan cara:
+1. Mengirim HTTP request ke website target
+2. TIDAK follow redirect (allow_redirects = false)
+3. Menangkap status code ASLI dari response pertama
+4. Untuk pengecekan konten, tool akan follow redirect secara terpisah dan cek body halaman tujuan
+5. CSRF token (_token) otomatis di-inject ke setiap POST/PUT/PATCH/DELETE, JANGAN masukkan _token di body_params
+
+## ATURAN STATUS CODE UNTUK WEBSITE LARAVEL
+
+Website Laravel menggunakan redirect (302) untuk hampir semua form submission:
+
+### Form Login (POST /login):
+- Login BERHASIL → status 302 (redirect ke dashboard)
+- Login GAGAL (credential salah) → status 302 (redirect back ke halaman login)
+- Login GAGAL (validasi/field kosong) → status 302 (redirect back ke halaman login)
+
+### Form CRUD (POST/PUT/DELETE):
+- Berhasil create/update/delete → status 302 (redirect ke halaman index)
+- Validasi gagal → status 302 (redirect back ke form)
+
+### Halaman GET biasa:
+- Halaman bisa diakses → status 200
+- Halaman butuh login (belum auth) → status 302 (redirect ke /login)
+- Halaman tidak ditemukan → status 404
+- Halaman forbidden → status 403
+
+### JANGAN PERNAH gunakan status code ini untuk website Laravel:
+- 401 (Laravel tidak return 401 untuk form login, gunakan 302)
+- 400 (Laravel tidak return 400 untuk validasi form, gunakan 302)
+- 201 (Laravel redirect 302 setelah create, bukan 201)
+
+## ATURAN EXPECTED_CONTAINS
+
+Untuk pengecekan konten setelah redirect:
+- Login berhasil → expected_contains bisa: "Dashboard" atau "dashboard" (teks di halaman tujuan)
+- Login gagal → expected_contains bisa: teks error yang muncul di halaman, misalnya pesan dari withErrors()
+- Halaman GET → expected_contains bisa: judul halaman atau teks unik di halaman tersebut
+- Jika tidak yakin teks apa yang muncul, SET NULL (jangan tebak-tebak)
+
+## FORMAT RESPONSE
 
 PENTING: Kamu HARUS merespons dalam format JSON yang valid dengan struktur berikut:
 {
@@ -324,18 +384,21 @@ PENTING: Kamu HARUS merespons dalam format JSON yang valid dengan struktur berik
       "headers": null,
       "body_params": null,
       "expected_status": 200,
-      "expected_contains": "teks yang harus ada di response (atau null)",
-      "expected_not_contains": "teks yang tidak boleh ada (atau null)"
+      "expected_contains": null,
+      "expected_not_contains": null
     }
   ]
 }
 
-Aturan:
+## ATURAN UMUM
 - Gunakan bahasa Indonesia untuk title dan description
 - Method harus salah satu dari: GET, POST, PUT, PATCH, DELETE
 - Endpoint harus relative path (dimulai dengan /)
-- headers dan body_params dalam format object JSON atau null
-- expected_status harus HTTP status code yang valid (200, 201, 301, 302, 401, 403, 404, 422, 500, dll)
+- body_params: object JSON untuk POST/PUT/PATCH, JANGAN sertakan _token (otomatis ditambahkan tool)
+- headers: biasanya null (tool sudah handle cookies dan session)
+- expected_status: HARUS sesuai aturan Laravel di atas (302 untuk form, 200 untuk GET)
+- expected_contains: HANYA isi jika kamu YAKIN teks tersebut ada di halaman. Jika ragu, set null
+- expected_not_contains: HANYA isi jika kamu YAKIN teks tersebut TIDAK boleh ada. Jika ragu, set null
 - Generate 3-10 test cases yang relevan
 - Sertakan positive test (happy path) dan negative test (error handling)
 - Jangan tambahkan teks apapun di luar JSON

@@ -47,7 +47,11 @@ class TestProjectController extends Controller
 
     public function show(TestProject $project): View
     {
-        $project->load(['testCases', 'testRuns' => fn ($q) => $q->with('user')->latest()->limit(10)]);
+        $project->load([
+            'testSuites',
+            'testCases.testSuite',
+            'testRuns' => fn ($q) => $q->with(['user', 'testSuite'])->latest()->limit(10),
+        ]);
 
         return view('admin.blackbox.projects.show', compact('project'));
     }

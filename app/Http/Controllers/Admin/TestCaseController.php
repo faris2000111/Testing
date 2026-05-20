@@ -14,6 +14,8 @@ class TestCaseController extends Controller
 {
     public function create(TestProject $project): View
     {
+        $project->load('testSuites');
+
         return view('admin.blackbox.cases.create', compact('project'));
     }
 
@@ -30,6 +32,7 @@ class TestCaseController extends Controller
             'expected_contains' => ['nullable', 'string', 'max:500'],
             'expected_not_contains' => ['nullable', 'string', 'max:500'],
             'is_active' => ['nullable', 'boolean'],
+            'test_suite_id' => ['nullable', 'exists:test_suites,id'],
         ]);
 
         $validated['is_active'] = $request->boolean('is_active', true);
@@ -50,6 +53,8 @@ class TestCaseController extends Controller
 
     public function edit(TestProject $project, TestCase $case): View
     {
+        $project->load('testSuites');
+
         return view('admin.blackbox.cases.edit', compact('project', 'case'));
     }
 

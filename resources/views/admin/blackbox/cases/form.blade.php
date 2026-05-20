@@ -1,5 +1,5 @@
 <div class="row">
-  <div class="col-md-8 mb-3">
+  <div class="col-md-6 mb-3">
     <label class="form-label">Judul Test Case <span class="text-danger">*</span></label>
     <input type="text" name="title" class="form-control @error('title') is-invalid @enderror"
       value="{{ old('title', $case->title ?? '') }}" placeholder="Contoh: Halaman login bisa diakses" required>
@@ -8,7 +8,22 @@
     @enderror
   </div>
 
-  <div class="col-md-4 mb-3">
+  <div class="col-md-3 mb-3">
+    <label class="form-label">Test Suite</label>
+    <select name="test_suite_id" class="form-select @error('test_suite_id') is-invalid @enderror">
+      <option value="">— Tanpa Suite —</option>
+      @foreach ($project->testSuites as $suite)
+        <option value="{{ $suite->id }}" {{ old('test_suite_id', $case->test_suite_id ?? '') == $suite->id ? 'selected' : '' }}>
+          {{ $suite->name }}
+        </option>
+      @endforeach
+    </select>
+    @error('test_suite_id')
+      <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+  </div>
+
+  <div class="col-md-3 mb-3">
     <label class="form-label">HTTP Method <span class="text-danger">*</span></label>
     <select name="method" class="form-select @error('method') is-invalid @enderror" required>
       @foreach (['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as $method)

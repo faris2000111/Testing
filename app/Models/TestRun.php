@@ -24,6 +24,11 @@ class TestRun extends Model
         return $this->belongsTo(TestProject::class);
     }
 
+    public function testSuite(): BelongsTo
+    {
+        return $this->belongsTo(TestSuite::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
