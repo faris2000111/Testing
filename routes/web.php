@@ -130,6 +130,8 @@ Route::prefix('admin')->middleware(['auth', 'maintenance', 'menu.access'])->name
     // Reports (Print/PDF)
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('/blackbox/{project}/runs/{run}', [ReportController::class, 'blackboxRun'])->name('blackbox-run');
+        Route::get('/blackbox/{project}/test-cases', [ReportController::class, 'testCases'])->name('test-cases');
+        Route::get('/blackbox/{project}/suites/{suite}/test-cases', [ReportController::class, 'suiteTestCases'])->name('suite-test-cases');
         Route::get('/manual/{project}/executions/{execution}', [ReportController::class, 'manualExecution'])->name('manual-execution');
     });
 

@@ -14,6 +14,9 @@
       <button type="button" class="btn btn-success btn-sm mb-0" id="btnRunTests" onclick="runTests()">
         <i class="fa fa-play me-1"></i> Run Semua
       </button>
+      <a href="{{ route('admin.reports.test-cases', $project) }}" target="_blank" class="btn btn-outline-success btn-sm mb-0">
+        <i class="fa fa-file-pdf me-1"></i> Print Semua Test Cases
+      </a>
       <a href="{{ route('admin.blackbox.projects.suites.create', $project) }}" class="btn btn-info btn-sm mb-0">
         <i class="fa fa-folder-plus me-1"></i> Tambah Suite
       </a>
@@ -156,6 +159,9 @@
           <button type="button" class="btn btn-xs btn-success" onclick="runTests({{ $suite->id }})" title="Run suite ini">
             <i class="fa fa-play"></i>
           </button>
+          <a href="{{ route('admin.reports.suite-test-cases', [$project, $suite]) }}" target="_blank" class="btn btn-xs btn-outline-success" title="Print PDF">
+            <i class="fa fa-file-pdf"></i>
+          </a>
           <a href="{{ route('admin.blackbox.projects.suites.edit', [$project, $suite]) }}" class="btn btn-xs btn-outline-primary" title="Edit suite">
             <i class="fa fa-pen"></i>
           </a>
@@ -450,7 +456,23 @@ function generateBlackboxCases() {
 function saveGeneratedCases(cases, btn) {
   var suiteId = document.getElementById('aiBlackboxSuite').value;
 
-  var promises = cases.map(function(c) {
+  // Simpan secara sequential (satu per satu) supaya urutan terjaga
+  var index = 0;
+
+  function saveNext() {
+    if (index >= cases.length) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil',
+        text: cases.length + ' test cases berhasil ditambahkan.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      setTimeout(function() { window.location.reload(); }, 2000);
+      return;
+    }
+
+    var c = cases[index];
     var formData = new FormData();
     formData.append('_token', '{{ csrf_token() }}');
     formData.append('title', c.title || 'Untitled');
@@ -465,27 +487,23 @@ function saveGeneratedCases(cases, btn) {
     if (c.headers) formData.append('headers', JSON.stringify(c.headers));
     if (c.body_params) formData.append('body_params', JSON.stringify(c.body_params));
 
-    return fetch('{{ route("admin.blackbox.projects.cases.store", $project) }}', {
+    fetch('{{ route("admin.blackbox.projects.cases.store", $project) }}', {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
       body: formData
+    })
+    .then(function() {
+      index++;
+      saveNext();
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa fa-wand-magic-sparkles me-1"></i> Generate & Simpan';
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan item ke-' + (index + 1) + ': ' + err.message });
     });
-  });
+  }
 
-  Promise.all(promises).then(function() {
-    Swal.fire({
-      icon: 'success',
-      title: 'Berhasil',
-      text: cases.length + ' test cases berhasil ditambahkan.',
-      timer: 2000,
-      showConfirmButton: false
-    });
-    setTimeout(function() { window.location.reload(); }, 2000);
-  }).catch(function(err) {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa fa-wand-magic-sparkles me-1"></i> Generate & Simpan';
-    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan: ' + err.message });
-  });
+  saveNext();
 }
 
 function escapeHtml(text) {
