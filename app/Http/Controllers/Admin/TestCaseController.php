@@ -96,6 +96,24 @@ class TestCaseController extends Controller
             ->with('success', "Test case \"{$title}\" berhasil dihapus.");
     }
 
+    /**
+     * Reorder test cases via AJAX (drag and drop).
+     */
+    public function reorder(Request $request, TestProject $project): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'items' => ['required', 'array'],
+            'items.*.id' => ['required', 'exists:test_cases,id'],
+            'items.*.order' => ['required', 'integer', 'min:0'],
+        ]);
+
+        foreach ($request->input('items') as $item) {
+            TestCase::where('id', $item['id'])->update(['order' => $item['order']]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
     private function parseJson(?string $value): ?array
     {
         if (empty($value)) {

@@ -181,6 +181,7 @@
             <table class="table align-items-center mb-0">
               <thead>
                 <tr>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 30px;"></th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">#</th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Method</th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Endpoint</th>
@@ -189,10 +190,11 @@
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="sortable-list" data-suite-id="{{ $suite->id }}">
                 @foreach ($suite->testCases as $case)
-                  <tr>
-                    <td class="ps-4">{{ $loop->iteration }}</td>
+                  <tr class="sortable-item" data-id="{{ $case->id }}" draggable="true">
+                    <td class="ps-3" style="cursor: grab;"><i class="fa fa-grip-vertical text-muted"></i></td>
+                    <td>{{ $loop->iteration }}</td>
                     <td><span class="badge bg-gradient-{{ $case->getMethodBadgeColor() }}">{{ $case->method }}</span></td>
                     <td><code class="text-xs">{{ $case->endpoint }}</code></td>
                     <td><span class="text-sm font-weight-bold">{{ $case->title }}</span></td>
@@ -226,6 +228,7 @@
           <table class="table align-items-center mb-0">
             <thead>
               <tr>
+                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 30px;"></th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">#</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Method</th>
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Endpoint</th>
@@ -234,10 +237,11 @@
                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="sortable-list" data-suite-id="none">
               @foreach ($unsuitedCases as $case)
-                <tr>
-                  <td class="ps-4">{{ $loop->iteration }}</td>
+                <tr class="sortable-item" data-id="{{ $case->id }}" draggable="true">
+                  <td class="ps-3" style="cursor: grab;"><i class="fa fa-grip-vertical text-muted"></i></td>
+                  <td>{{ $loop->iteration }}</td>
                   <td><span class="badge bg-gradient-{{ $case->getMethodBadgeColor() }}">{{ $case->method }}</span></td>
                   <td><code class="text-xs">{{ $case->endpoint }}</code></td>
                   <td><span class="text-sm font-weight-bold">{{ $case->title }}</span></td>
@@ -512,5 +516,60 @@ function escapeHtml(text) {
   div.appendChild(document.createTextNode(text));
   return div.innerHTML;
 }
+
+// ─── Drag & Drop Reorder ───
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.sortable-list').forEach(function(tbody) {
+    var dragged = null;
+
+    tbody.querySelectorAll('.sortable-item').forEach(function(row) {
+      row.addEventListener('dragstart', function(e) {
+        dragged = this;
+        this.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      row.addEventListener('dragend', function() {
+        this.style.opacity = '1';
+        dragged = null;
+        saveTestCaseOrder(tbody);
+      });
+
+      row.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragged && dragged !== this) {
+          var rect = this.getBoundingClientRect();
+          var mid = rect.top + rect.height / 2;
+          if (e.clientY < mid) {
+            tbody.insertBefore(dragged, this);
+          } else {
+            tbody.insertBefore(dragged, this.nextSibling);
+          }
+        }
+      });
+    });
+  });
+
+  function saveTestCaseOrder(tbody) {
+    var items = [];
+    tbody.querySelectorAll('.sortable-item').forEach(function(row, i) {
+      items.push({ id: parseInt(row.dataset.id), order: i });
+      // Update visual number
+      row.querySelectorAll('td')[1].textContent = (i + 1);
+    });
+
+    fetch('{{ route("admin.blackbox.projects.cases.reorder", $project) }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ items: items })
+    });
+  }
+});
 </script>
 @endpush
