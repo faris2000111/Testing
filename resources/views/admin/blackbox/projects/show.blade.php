@@ -305,9 +305,15 @@
                   <td><span class="text-danger font-weight-bold">{{ $run->failed }}</span></td>
                   <td class="text-sm">{{ number_format($run->duration_ms, 0) }} ms</td>
                   <td>
-                    <a href="{{ route('admin.blackbox.projects.runs.show', [$project, $run]) }}" class="btn btn-sm btn-outline-info">
+                    <a href="{{ route('admin.blackbox.projects.runs.show', [$project, $run]) }}" class="btn btn-sm btn-outline-info me-1">
                       <i class="fa fa-eye"></i>
                     </a>
+                    <form action="{{ route('admin.blackbox.projects.runs.destroy', [$project, $run]) }}" method="POST" class="d-inline">
+                      @csrf @method('DELETE')
+                      <button type="button" class="btn btn-sm btn-outline-danger btn-delete-swal" data-title="Hapus test run #{{ $run->id }}?">
+                        <i class="fa fa-trash"></i>
+                      </button>
+                    </form>
                   </td>
                 </tr>
               @endforeach

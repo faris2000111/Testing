@@ -113,6 +113,20 @@ class TestRunnerController extends Controller
     }
 
     /**
+     * Delete a test run.
+     */
+    public function destroy(TestProject $project, TestRun $run): \Illuminate\Http\RedirectResponse
+    {
+        $runId = $run->id;
+        $run->delete();
+
+        ActivityLog::record('deleted', null, "Menghapus test run #{$runId}");
+
+        return redirect()->route('admin.blackbox.projects.show', $project)
+            ->with('success', "Test run #{$runId} berhasil dihapus.");
+    }
+
+    /**
      * Fetch CSRF token from the target website.
      */
     private function fetchCsrfToken(TestProject $project): void

@@ -86,6 +86,7 @@ Route::prefix('admin')->middleware(['auth', 'maintenance', 'menu.access'])->name
         Route::resource('projects', TestProjectController::class);
         Route::post('/projects/{project}/run', [TestRunnerController::class, 'run'])->name('projects.run');
         Route::get('/projects/{project}/runs/{run}', [TestRunnerController::class, 'show'])->name('projects.runs.show');
+        Route::delete('/projects/{project}/runs/{run}', [TestRunnerController::class, 'destroy'])->name('projects.runs.destroy');
         Route::get('/projects/{project}/cases/create', [TestCaseController::class, 'create'])->name('projects.cases.create');
         Route::post('/projects/{project}/cases', [TestCaseController::class, 'store'])->name('projects.cases.store');
         Route::get('/projects/{project}/cases/{case}/edit', [TestCaseController::class, 'edit'])->name('projects.cases.edit');
