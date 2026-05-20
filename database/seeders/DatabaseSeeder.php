@@ -64,6 +64,7 @@ class DatabaseSeeder extends Seeder
         }
 
         MenuSection::create(['name' => 'Overview', 'order' => 1]);
+        MenuSection::create(['name' => 'Testing', 'order' => 2]);
         MenuSection::create(['name' => 'Sistem', 'order' => 99]);
     }
 
@@ -174,5 +175,32 @@ class DatabaseSeeder extends Seeder
             'order' => 8,
             'is_system' => true,
         ]);
+
+        // Testing section
+        $testing = MenuSection::where('name', 'Testing')->first();
+
+        if ($testing) {
+            AdminMenu::create([
+                'label' => 'Blackbox Testing',
+                'slug' => 'blackbox-projects',
+                'icon' => 'fa-vial',
+                'icon_gradient' => 'info',
+                'route_name' => 'admin.blackbox.projects.index',
+                'section_id' => $testing->id,
+                'order' => 1,
+                'is_system' => true,
+            ]);
+
+            AdminMenu::create([
+                'label' => 'Manual Testing',
+                'slug' => 'manual-testing',
+                'icon' => 'fa-clipboard-check',
+                'icon_gradient' => 'success',
+                'route_name' => 'admin.manual-testing.index',
+                'section_id' => $testing->id,
+                'order' => 2,
+                'is_system' => true,
+            ]);
+        }
     }
 }
