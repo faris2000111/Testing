@@ -391,13 +391,27 @@ aside.admin-sidenav.navbar.navbar-vertical,
 /* On mobile (<xl) the sidebar slides in from the left when toggled.
  * Keep Argon's translate animation intact and add a backdrop. */
 @media (max-width: 1199.98px) {
-  aside.admin-sidenav.navbar.navbar-vertical {
+  aside.admin-sidenav--mobile.navbar.navbar-vertical {
     transform: translateX(calc(-100% - 1.5rem));
     transition: transform 0.25s ease;
     z-index: 1080;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    height: 100vh !important;
+    top: 0 !important;
   }
-  body.g-sidenav-pinned aside.admin-sidenav.navbar.navbar-vertical {
+  body.g-sidenav-pinned aside.admin-sidenav--mobile.navbar.navbar-vertical {
     transform: translateX(0);
+  }
+}
+
+/* Desktop sidebar is always visible on xl+ */
+.admin-sidenav--desktop {
+  display: none !important;
+}
+@media (min-width: 1200px) {
+  .admin-sidenav--desktop {
+    display: flex !important;
   }
 }
 

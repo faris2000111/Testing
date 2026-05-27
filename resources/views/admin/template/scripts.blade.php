@@ -48,7 +48,7 @@
     document.addEventListener('DOMContentLoaded', function () {
       var toggle = document.getElementById('iconNavbarSidenav');
       var iconClose = document.getElementById('iconSidenav');
-      var sidenav = document.getElementById('sidenav-main');
+      var sidenav = document.getElementById('sidenav-mobile');
       if (!sidenav) return;
 
       var backdrop = document.createElement('div');
