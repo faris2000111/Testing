@@ -131,6 +131,7 @@ class TestRunnerController extends Controller
             }
         }
 
+        $promptParts[] = 'Penting: Kembalikan respon HANYA berupa JSON valid sesuai format test_cases tanpa teks penjelasan lain.';
         $fullPrompt = implode("\n\n", $promptParts);
 
         // Find or create project

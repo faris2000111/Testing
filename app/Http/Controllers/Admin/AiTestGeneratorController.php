@@ -461,23 +461,42 @@ PROMPT;
     {
         $decoded = $this->extractJson($content);
 
-        if (! is_array($decoded) || empty($decoded['test_cases'])) {
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        // Support various root keys: test_cases, cases, or direct indexed array
+        $rawCases = [];
+        if (isset($decoded['test_cases']) && is_array($decoded['test_cases'])) {
+            $rawCases = $decoded['test_cases'];
+        } elseif (isset($decoded['cases']) && is_array($decoded['cases'])) {
+            $rawCases = $decoded['cases'];
+        } elseif (array_is_list($decoded)) {
+            $rawCases = $decoded;
+        }
+
+        if (empty($rawCases)) {
             return null;
         }
 
         $cases = [];
-        foreach ($decoded['test_cases'] as $case) {
-            if (empty($case['endpoint']) || empty($case['method'])) {
+        foreach ($rawCases as $case) {
+            if (! is_array($case) || empty($case['endpoint']) || empty($case['method'])) {
                 continue;
             }
 
+            $endpoint = $case['endpoint'];
+            if (! str_starts_with($endpoint, '/')) {
+                $endpoint = '/' . $endpoint;
+            }
+
             $cases[] = [
-                'title' => $case['title'] ?? 'Untitled',
+                'title' => $case['title'] ?? 'Untitled Test Case',
                 'description' => $case['description'] ?? null,
-                'method' => in_array($case['method'] ?? '', ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-                    ? $case['method']
+                'method' => in_array(strtoupper($case['method'] ?? ''), ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+                    ? strtoupper($case['method'])
                     : 'GET',
-                'endpoint' => $case['endpoint'],
+                'endpoint' => $endpoint,
                 'headers' => $case['headers'] ?? null,
                 'body_params' => $case['body_params'] ?? null,
                 'expected_status' => (int) ($case['expected_status'] ?? 200),
@@ -490,27 +509,54 @@ PROMPT;
     }
 
     /**
-     * Extract JSON from AI response (handles markdown code blocks).
+     * Extract JSON from AI response (robust handling for markdown, think tags, and wrapped objects).
      */
     private function extractJson(string $content): ?array
     {
         $content = trim($content);
 
-        // Remove markdown code blocks if present
-        if (str_starts_with($content, '```')) {
-            $content = preg_replace('/^```(?:json)?\s*/', '', $content);
-            $content = preg_replace('/\s*```$/', '', $content);
+        // 1. Remove thinking / reasoning blocks (e.g. <think>...</think>)
+        $content = preg_replace('/<think>[\s\S]*?<\/think>/i', '', $content);
+        $content = trim($content);
+
+        // 2. Extract content from markdown code blocks ```json ... ``` or ``` ... ```
+        if (preg_match('/```(?:json)?\s*([\s\S]*?)\s*```/i', $content, $matches)) {
+            $codeBlockContent = trim($matches[1]);
+            $decoded = json_decode($codeBlockContent, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+            $content = $codeBlockContent;
         }
 
+        // 3. Direct json_decode attempt
         $decoded = json_decode($content, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            // Try to find JSON in the response
-            if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
-                $decoded = json_decode($matches[0], true);
+        // 4. Targeted extraction between first '{' and last '}'
+        $firstBrace = strpos($content, '{');
+        $lastBrace = strrpos($content, '}');
+        if ($firstBrace !== false && $lastBrace !== false && $lastBrace > $firstBrace) {
+            $jsonString = substr($content, $firstBrace, $lastBrace - $firstBrace + 1);
+            $decoded = json_decode($jsonString, true);
+            if (is_array($decoded)) {
+                return $decoded;
             }
         }
 
-        return $decoded;
+        // 5. Targeted extraction between first '[' and last ']' (if returned as top-level array)
+        $firstBracket = strpos($content, '[');
+        $lastBracket = strrpos($content, ']');
+        if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
+            $jsonString = substr($content, $firstBracket, $lastBracket - $firstBracket + 1);
+            $decoded = json_decode($jsonString, true);
+            if (is_array($decoded)) {
+                return ['test_cases' => $decoded];
+            }
+        }
+
+        return null;
     }
 }
