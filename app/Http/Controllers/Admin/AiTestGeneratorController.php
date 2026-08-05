@@ -560,14 +560,46 @@ PROMPT;
             }
         }
 
-        // 5. Targeted extraction between first '[' and last ']' (if returned as top-level array)
-        $firstBracket = strpos($content, '[');
-        $lastBracket = strrpos($content, ']');
-        if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
-            $jsonString = substr($content, $firstBracket, $lastBracket - $firstBracket + 1);
-            $decoded = json_decode($jsonString, true);
-            if (is_array($decoded)) {
-                return ['test_cases' => $decoded];
+        // 6. Try repairing truncated JSON (if model hit output token limit mid-response)
+        $repaired = $this->tryRepairTruncatedJson($content);
+        if (is_array($repaired)) {
+            return $repaired;
+        }
+
+        return null;
+    }
+
+    /**
+     * Attempt to repair truncated JSON from AI responses that hit token limits.
+     */
+    private function tryRepairTruncatedJson(string $content): ?array
+    {
+        $firstBrace = strpos($content, '{');
+        if ($firstBrace === false) {
+            return null;
+        }
+
+        $jsonCandidate = substr($content, $firstBrace);
+        $lastObjectBrace = strrpos($jsonCandidate, '}');
+        if ($lastObjectBrace === false) {
+            return null;
+        }
+
+        // Cut off any broken item after the last complete object closing brace '}'
+        $truncated = substr($jsonCandidate, 0, $lastObjectBrace + 1);
+        $truncated = rtrim(rtrim($truncated), ',');
+
+        // Try adding missing closing brackets
+        $attempts = [
+            $truncated . ']}',
+            $truncated . ']',
+            $truncated . '}',
+        ];
+
+        foreach ($attempts as $attempt) {
+            $decoded = json_decode($attempt, true);
+            if (is_array($decoded) && (! empty($decoded['test_cases']) || ! empty($decoded['cases']) || array_is_list($decoded))) {
+                return $decoded;
             }
         }
 
