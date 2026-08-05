@@ -400,7 +400,7 @@ PENTING: Kamu HARUS merespons dalam format JSON yang valid dengan struktur berik
 - expected_contains: HANYA isi jika kamu YAKIN teks tersebut ada di halaman. Untuk POST /login dan POST /logout HARUS set expected_contains ke null!
 - expected_not_contains: HANYA isi jika kamu YAKIN teks tersebut TIDAK boleh ada. Jika ragu, set null
 - Untuk Logout: HARUS menggunakan method POST ke /logout (bukan GET), dengan expected_status 302.
-- Generate 3-10 test cases yang relevan
+- Generate SEBANYAK-BANYAKNYA test cases komprehensif dan sangat lengkap untuk menguji SELURUH halaman, menu admin, sub-menu, CRUD form (create, edit, delete), validasi, dan fitur pengguna.
 - Sertakan positive test (happy path) dan negative test (error handling)
 - URUTAN TEST CASE SANGAT PENTING! Untuk CRUD, SELALU gunakan urutan ini:
   1. Login dulu (jika butuh auth)
@@ -490,17 +490,29 @@ PROMPT;
                 $endpoint = '/' . $endpoint;
             }
 
+            $method = in_array(strtoupper($case['method'] ?? ''), ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+                ? strtoupper($case['method'])
+                : 'GET';
+
+            $expectedStatus = (int) ($case['expected_status'] ?? 200);
+            $expectedContains = $case['expected_contains'] ?? null;
+
+            // Auto-correct logout method to POST (since Laravel /logout requires POST)
+            if (rtrim(strtolower($endpoint), '/') === '/logout' || str_contains(strtolower($endpoint), 'logout')) {
+                $method = 'POST';
+                $expectedStatus = 302;
+                $expectedContains = null;
+            }
+
             $cases[] = [
                 'title' => $case['title'] ?? 'Untitled Test Case',
                 'description' => $case['description'] ?? null,
-                'method' => in_array(strtoupper($case['method'] ?? ''), ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-                    ? strtoupper($case['method'])
-                    : 'GET',
+                'method' => $method,
                 'endpoint' => $endpoint,
                 'headers' => $case['headers'] ?? null,
                 'body_params' => $case['body_params'] ?? null,
-                'expected_status' => (int) ($case['expected_status'] ?? 200),
-                'expected_contains' => $case['expected_contains'] ?? null,
+                'expected_status' => $expectedStatus,
+                'expected_contains' => $expectedContains,
                 'expected_not_contains' => $case['expected_not_contains'] ?? null,
             ];
         }

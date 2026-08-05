@@ -123,11 +123,11 @@ class TestRunnerController extends Controller
             if (! empty($accountText)) {
                 $promptParts[] = "Website ini memiliki beberapa akun/role login yang akan diuji.\n" .
                     "Daftar Kredensial Akun per Role:\n" . implode("\n", $accountText) . "\n\n" .
-                    "Instruksi Pengujian Multirole:\n" .
-                    "- Buatkan skenario test case terpisah untuk masing-masing role di atas.\n" .
-                    "- Untuk setiap role, awali dengan test case POST login menggunakan kredensial role tersebut (misal POST /login dengan body_params email/username & password).\n" .
-                    "- Apabila berganti pengujian dari satu akun ke akun lainnya, sertakan test case GET /logout terlebih dahulu agar session ter-reset.\n" .
-                    "- Uji halaman dashboard dan fitur-fitur yang sesuai untuk masing-masing role (misal: /admin/dashboard, /admin/users untuk Admin; dan /dashboard, /profile, /workspace untuk Pengguna).";
+                    "Instruksi Pengujian Multirole Maksimal & Komprehensif:\n" .
+                    "- Buatkan SEBANYAK-BANYAKNYA test cases yang sangat lengkap dan detail.\n" .
+                    "- Untuk Role Admin / Superadmin: Wajib uji SELURUH sub-menu admin yang ada (seperti /admin/dashboard, /admin/users, /admin/users/create, /admin/roles, /admin/roles/create, /admin/menus, /admin/sections, /admin/settings, /admin/profile, /admin/password, /admin/reports, dll).\n" .
+                    "- Untuk Role Pengguna: Wajib uji SELURUH halaman dan fitur pengguna (seperti /workspace, /dashboard, /profile, /settings, dll).\n" .
+                    "- Untuk setiap role, awali dengan POST /login. Apabila berganti akun dari Admin ke Pengguna, sertakan POST /logout terlebih dahulu.";
             }
         }
 
