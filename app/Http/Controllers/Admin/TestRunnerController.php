@@ -30,7 +30,8 @@ class TestRunnerController extends Controller
     public function quickTest(Request $request): JsonResponse
     {
         @set_time_limit(300);
-        $validated = $request->validate([
+        try {
+            $validated = $request->validate([
             'url' => ['required', 'url', 'max:500'],
             'username' => ['nullable', 'string', 'max:255'],
             'password' => ['nullable', 'string', 'max:255'],
@@ -280,7 +281,13 @@ class TestRunnerController extends Controller
             $runData['project_url'] = route('admin.blackbox.projects.show', $project);
         }
 
-        return response()->json($runData);
+            return response()->json($runData);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan server: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

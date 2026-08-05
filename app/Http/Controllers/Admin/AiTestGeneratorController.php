@@ -523,7 +523,7 @@ PROMPT;
     }
 
     /**
-     * Extract JSON from AI response (robust handling for markdown, think tags, and wrapped objects).
+     * Extract JSON from AI response (robust handling for markdown, think tags, root arrays, and wrapped objects).
      */
     private function extractJson(string $content): ?array
     {
@@ -549,7 +549,7 @@ PROMPT;
             return $decoded;
         }
 
-        // 4. Targeted extraction between first '{' and last '}'
+        // 4. Targeted extraction between first '{' and last '}' (object schema)
         $firstBrace = strpos($content, '{');
         $lastBrace = strrpos($content, '}');
         if ($firstBrace !== false && $lastBrace !== false && $lastBrace > $firstBrace) {
@@ -557,6 +557,17 @@ PROMPT;
             $decoded = json_decode($jsonString, true);
             if (is_array($decoded)) {
                 return $decoded;
+            }
+        }
+
+        // 5. Targeted extraction between first '[' and last ']' (root-level array schema)
+        $firstBracket = strpos($content, '[');
+        $lastBracket = strrpos($content, ']');
+        if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
+            $jsonString = substr($content, $firstBracket, $lastBracket - $firstBracket + 1);
+            $decoded = json_decode($jsonString, true);
+            if (is_array($decoded)) {
+                return ['test_cases' => $decoded];
             }
         }
 
@@ -574,32 +585,43 @@ PROMPT;
      */
     private function tryRepairTruncatedJson(string $content): ?array
     {
+        // Try repairing truncated root object {...
         $firstBrace = strpos($content, '{');
-        if ($firstBrace === false) {
-            return null;
+        if ($firstBrace !== false) {
+            $jsonCandidate = substr($content, $firstBrace);
+            $lastObjectBrace = strrpos($jsonCandidate, '}');
+            if ($lastObjectBrace !== false) {
+                $truncated = substr($jsonCandidate, 0, $lastObjectBrace + 1);
+                $truncated = rtrim(rtrim($truncated), ',');
+
+                $attempts = [
+                    $truncated . ']}',
+                    $truncated . ']',
+                    $truncated . '}',
+                ];
+
+                foreach ($attempts as $attempt) {
+                    $decoded = json_decode($attempt, true);
+                    if (is_array($decoded) && (! empty($decoded['test_cases']) || ! empty($decoded['cases']) || array_is_list($decoded))) {
+                        return $decoded;
+                    }
+                }
+            }
         }
 
-        $jsonCandidate = substr($content, $firstBrace);
-        $lastObjectBrace = strrpos($jsonCandidate, '}');
-        if ($lastObjectBrace === false) {
-            return null;
-        }
+        // Try repairing truncated root array [...
+        $firstBracket = strpos($content, '[');
+        if ($firstBracket !== false) {
+            $jsonCandidate = substr($content, $firstBracket);
+            $lastObjectBrace = strrpos($jsonCandidate, '}');
+            if ($lastObjectBrace !== false) {
+                $truncated = substr($jsonCandidate, 0, $lastObjectBrace + 1);
+                $truncated = rtrim(rtrim($truncated), ',');
 
-        // Cut off any broken item after the last complete object closing brace '}'
-        $truncated = substr($jsonCandidate, 0, $lastObjectBrace + 1);
-        $truncated = rtrim(rtrim($truncated), ',');
-
-        // Try adding missing closing brackets
-        $attempts = [
-            $truncated . ']}',
-            $truncated . ']',
-            $truncated . '}',
-        ];
-
-        foreach ($attempts as $attempt) {
-            $decoded = json_decode($attempt, true);
-            if (is_array($decoded) && (! empty($decoded['test_cases']) || ! empty($decoded['cases']) || array_is_list($decoded))) {
-                return $decoded;
+                $decoded = json_decode($truncated . ']', true);
+                if (is_array($decoded) && array_is_list($decoded)) {
+                    return ['test_cases' => $decoded];
+                }
             }
         }
 
