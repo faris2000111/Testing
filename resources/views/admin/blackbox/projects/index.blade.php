@@ -245,9 +245,10 @@ function runQuickTest() {
     if (data.success) {
       Swal.fire({
         icon: 'success',
-        title: 'Testing Multirole Selesai!',
-        text: 'Total: ' + data.total + ' cases | Passed: ' + data.passed + ' | Failed: ' + data.failed,
-        confirmButtonText: 'Lihat Laporan Detail'
+        title: 'Test Cases Berhasil Dibuat!',
+        text: (data.total ? data.total + ' test cases' : 'Seluruh test cases') + ' komprehensif berhasil dibuat. Mengalihkan ke halaman live testing...',
+        timer: 1500,
+        showConfirmButton: false
       }).then(function() {
         window.location.href = data.redirect_url;
       });

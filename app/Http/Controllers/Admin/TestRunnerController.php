@@ -272,16 +272,13 @@ class TestRunnerController extends Controller
             ]);
         }
 
-        // Execute tests immediately
-        $runResponse = $this->run(new Request(), $project);
-        $runData = json_decode($runResponse->getContent(), true);
-
-        if ($runData['success'] ?? false) {
-            $runData['redirect_url'] = route('admin.blackbox.projects.runs.show', [$project, $runData['run_id']]);
-            $runData['project_url'] = route('admin.blackbox.projects.show', $project);
-        }
-
-            return response()->json($runData);
+        return response()->json([
+            'success' => true,
+            'message' => count($casesData) . ' test cases komprehensif berhasil dibuat!',
+            'total' => count($casesData),
+            'redirect_url' => route('admin.blackbox.projects.show', ['project' => $project->id, 'auto_run' => 1]),
+            'project_url' => route('admin.blackbox.projects.show', $project),
+        ]);
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,

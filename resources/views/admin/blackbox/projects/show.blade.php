@@ -570,6 +570,18 @@ document.addEventListener('DOMContentLoaded', function() {
       body: JSON.stringify({ items: items })
     });
   }
+
+  // Auto-run trigger if redirected from Quick Multi-Role Test
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('auto_run') === '1') {
+    var cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+    window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+    setTimeout(function() {
+      if (typeof runTests === 'function') {
+        runTests();
+      }
+    }, 500);
+  }
 });
 </script>
 @endpush
