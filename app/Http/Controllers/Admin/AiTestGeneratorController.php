@@ -402,18 +402,15 @@ PENTING: Kamu HARUS merespons dalam format JSON yang valid dengan struktur berik
 - expected_contains: HANYA isi jika kamu YAKIN teks tersebut ada di halaman. Untuk POST /login dan POST /logout HARUS set expected_contains ke null!
 - expected_not_contains: HANYA isi jika kamu YAKIN teks tersebut TIDAK boleh ada. Jika ragu, set null
 - Untuk Logout: HARUS menggunakan method POST ke /logout (bukan GET), dengan expected_status 302.
+- ATURAN PENTING URUTAN LOGOUT: Test case POST /logout HARUS SELALU ditaruh di URUTAN PALING AKHIR dari pengujian role! JANGAN PERNAH menaruh /logout di tengah-tengah atau sebelum pengujian halaman dashboard/internal!
 - Generate SEBANYAK-BANYAKNYA test cases komprehensif dan sangat lengkap untuk menguji SELURUH halaman, menu admin, sub-menu, CRUD form (create, edit, delete), validasi, dan fitur pengguna.
 - Sertakan positive test (happy path) dan negative test (error handling)
-- URUTAN TEST CASE SANGAT PENTING! Untuk CRUD, SELALU gunakan urutan ini:
-  1. Login dulu (jika butuh auth)
-  2. GET halaman index (list data)
-  3. GET halaman create (form)
-  4. POST create data baru (store)
-  5. GET halaman edit (form edit)
-  6. PUT/PATCH update data
-  7. DELETE hapus data (SELALU DI AKHIR)
-  8. Negative tests (validasi gagal, akses tanpa login, dll)
-- DELETE harus SELALU di urutan paling akhir supaya data yang di-create/update masih ada saat di-test
+- URUTAN TEST CASE SANGAT PENTING! SELALU gunakan urutan ini:
+  1. POST /login (Login berhasil)
+  2. GET halaman index, dashboard, dan seluruh sub-menu internal
+  3. CRUD (Create, Edit, Update, Delete)
+  4. Negative tests (validasi gagal, password salah)
+  5. POST /logout (HARUS TERAKHIR!)
 - Jangan tambahkan teks apapun di luar JSON
 - Pastikan JSON valid dan bisa di-parse
 PROMPT;
@@ -426,34 +423,11 @@ PROMPT;
     {
         $decoded = $this->extractJson($content);
 
-        if (! is_array($decoded) || empty($decoded['steps'])) {
+        if (! is_array($decoded)) {
             return null;
         }
 
-        $result = [
-            'title' => $decoded['title'] ?? 'Untitled Scenario',
-            'description' => $decoded['description'] ?? null,
-            'module' => $decoded['module'] ?? null,
-            'priority' => in_array($decoded['priority'] ?? '', ['low', 'medium', 'high', 'critical'])
-                ? $decoded['priority']
-                : 'medium',
-            'precondition' => $decoded['precondition'] ?? null,
-            'steps' => [],
-        ];
-
-        foreach ($decoded['steps'] as $step) {
-            if (empty($step['action']) || empty($step['expected_result'])) {
-                continue;
-            }
-
-            $result['steps'][] = [
-                'action' => $step['action'],
-                'expected_result' => $step['expected_result'],
-                'test_data' => $step['test_data'] ?? null,
-            ];
-        }
-
-        return empty($result['steps']) ? null : $result;
+        return $decoded;
     }
 
     /**
@@ -519,7 +493,25 @@ PROMPT;
             ];
         }
 
-        return empty($cases) ? null : ['test_cases' => $cases];
+        if (empty($cases)) {
+            return null;
+        }
+
+        // Re-order test cases so that POST /logout ALWAYS comes at the very end after authenticated tests
+        $nonLogout = [];
+        $logouts = [];
+        foreach ($cases as $c) {
+            $isLogout = rtrim(strtolower($c['endpoint']), '/') === '/logout'
+                || str_contains(strtolower($c['title']), 'logout');
+            if ($isLogout) {
+                $logouts[] = $c;
+            } else {
+                $nonLogout[] = $c;
+            }
+        }
+        $cases = array_merge($nonLogout, $logouts);
+
+        return ['test_cases' => $cases];
     }
 
     /**
