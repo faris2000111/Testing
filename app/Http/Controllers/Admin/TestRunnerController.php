@@ -61,8 +61,8 @@ class TestRunnerController extends Controller
         $loginInputNames = [];
 
         try {
-            // 1. Fetch public home page HTML
-            $crawlResponse = Http::timeout(10)->withoutVerifying()->get($url);
+            // 1. Fetch public home page HTML (fast 3s timeout)
+            $crawlResponse = Http::timeout(3)->withoutVerifying()->get($url);
             if ($crawlResponse->successful()) {
                 $html = $crawlResponse->body();
                 if (preg_match_all('/(?:href|action)=["\'](\/[^"\'#\?]*)/i', $html, $matches)) {
@@ -70,10 +70,10 @@ class TestRunnerController extends Controller
                 }
             }
 
-            // 2. Fetch /login page HTML to inspect login form input names & CSRF
+            // 2. Fetch /login page HTML to inspect login form input names & CSRF (fast 3s timeout)
             $loginUrl = rtrim($url, '/') . '/login';
             $loginHtml = '';
-            $loginResp = Http::timeout(10)->withoutVerifying()->get($loginUrl);
+            $loginResp = Http::timeout(3)->withoutVerifying()->get($loginUrl);
             if ($loginResp->successful()) {
                 $loginHtml = $loginResp->body();
                 if (preg_match_all('/<input[^>]+name=["\']([^"\']+)["\']/i', $loginHtml, $inputMatches)) {
@@ -125,17 +125,20 @@ class TestRunnerController extends Controller
                             $loginBody['_token'] = $csrfToken;
                         }
 
-                        // Perform login POST request
-                        Http::timeout(10)->withoutVerifying()->withOptions([
+                        // Perform login POST request (fast 3s timeout)
+                        Http::timeout(3)->withoutVerifying()->withOptions([
                             'cookies' => $tempJar,
                             'allow_redirects' => true,
                         ])->asForm()->post($loginUrl, $loginBody);
 
-                        // Crawl logged-in dashboard submenus
-                        $dashPages = ['/admin/dashboard', '/admin', '/dashboard', '/workspace', '/user/workspace'];
+                        // Targeted scan based on role (fast 3s timeout)
+                        $dashPages = str_contains(strtolower($acc['role'] ?? ''), 'admin')
+                            ? ['/admin/dashboard', '/admin']
+                            : ['/workspace', '/dashboard'];
+
                         foreach ($dashPages as $dashPath) {
                             try {
-                                $dashResp = Http::timeout(10)->withoutVerifying()->withOptions([
+                                $dashResp = Http::timeout(3)->withoutVerifying()->withOptions([
                                     'cookies' => $tempJar,
                                     'allow_redirects' => true,
                                 ])->get(rtrim($url, '/') . $dashPath);
@@ -161,7 +164,7 @@ class TestRunnerController extends Controller
                     && ! str_starts_with($ep, '//')
                     && $ep !== '/logout';
             }));
-            $discoveredEndpoints = array_values(array_slice($discoveredEndpoints, 0, 45));
+            $discoveredEndpoints = array_values(array_slice($discoveredEndpoints, 0, 30));
 
         } catch (\Exception $e) {
             // Silence crawl errors, AI will fall back to standard URL generation

@@ -224,10 +224,22 @@ function runQuickTest() {
     body: JSON.stringify({ url: url, prompt: prompt, accounts: accounts })
   })
   .then(function(res) {
-    if (!res.ok) {
-      return res.json().then(function(err) { throw new Error(err.message || 'Terjadi kesalahan'); });
+    var contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return res.json().then(function(data) {
+        if (!res.ok) {
+          throw new Error(data.message || 'Terjadi kesalahan (' + res.status + ')');
+        }
+        return data;
+      });
+    } else {
+      return res.text().then(function(text) {
+        if (res.status === 504 || text.includes('504')) {
+          throw new Error('Server web proxy timed out (504 Gateway Timeout). Silakan coba jalankan ulang.');
+        }
+        throw new Error('Server mengembalikan error/halaman HTTP ' + res.status + ' (bukan JSON).');
+      });
     }
-    return res.json();
   })
   .then(function(data) {
     if (data.success) {
