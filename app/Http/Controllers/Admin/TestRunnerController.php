@@ -45,8 +45,10 @@ class TestRunnerController extends Controller
         $host = $parsedUrl['host'] ?? 'Target Website';
         $projectName = 'Quick Test - ' . $host;
 
-        // Auto-crawl / scan target page to discover real endpoints
+        // Auto-crawl / scan target page to discover real endpoints & login form inputs
         $discoveredEndpoints = [];
+        $loginInputNames = [];
+
         try {
             $crawlResponse = Http::timeout(10)->withoutVerifying()->get($url);
             if ($crawlResponse->successful()) {
@@ -59,6 +61,18 @@ class TestRunnerController extends Controller
                         return ! preg_match('/\.(css|js|png|jpg|jpeg|svg|ico|gif|woff|woff2|ttf|eot)$/i', $ep);
                     });
                     $discoveredEndpoints = array_values(array_slice($discoveredEndpoints, 0, 15));
+                }
+            }
+
+            // Try fetching /login page to inspect input field names
+            $loginUrl = rtrim($url, '/') . '/login';
+            $loginResp = Http::timeout(10)->withoutVerifying()->get($loginUrl);
+            if ($loginResp->successful()) {
+                $loginHtml = $loginResp->body();
+                if (preg_match_all('/<input[^>]+name=["\']([^"\']+)["\']/i', $loginHtml, $inputMatches)) {
+                    $loginInputNames = array_values(array_filter(array_unique($inputMatches[1]), function ($n) {
+                        return ! in_array(strtolower($n), ['_token', '_method', 'remember', 'remember_me', 'submit']);
+                    }));
                 }
             }
         } catch (\Exception $e) {
@@ -75,6 +89,10 @@ class TestRunnerController extends Controller
 
         if (! empty($discoveredEndpoints)) {
             $promptParts[] = 'Berikut adalah beberapa endpoint/URL asli yang terdeteksi dari HTML website: ' . implode(', ', $discoveredEndpoints);
+        }
+
+        if (! empty($loginInputNames)) {
+            $promptParts[] = 'Form login terdeteksi menggunakan nama input field: ' . implode(', ', $loginInputNames) . '. Gunakan nama field ini secara tepat pada body_params POST /login.';
         }
 
         // Handle multi-account support

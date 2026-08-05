@@ -396,9 +396,10 @@ PENTING: Kamu HARUS merespons dalam format JSON yang valid dengan struktur berik
 - Endpoint harus relative path (dimulai dengan /)
 - body_params: object JSON untuk POST/PUT/PATCH, JANGAN sertakan _token (otomatis ditambahkan tool)
 - headers: biasanya null (tool sudah handle cookies dan session)
-- expected_status: HARUS sesuai aturan Laravel di atas (302 untuk form, 200 untuk GET)
-- expected_contains: HANYA isi jika kamu YAKIN teks tersebut ada di halaman. Jika ragu, set null
+- expected_status: HARUS sesuai aturan Laravel di atas (302 untuk form/POST login/POST logout, 200 untuk GET)
+- expected_contains: HANYA isi jika kamu YAKIN teks tersebut ada di halaman. Untuk POST /login dan POST /logout HARUS set expected_contains ke null!
 - expected_not_contains: HANYA isi jika kamu YAKIN teks tersebut TIDAK boleh ada. Jika ragu, set null
+- Untuk Logout: HARUS menggunakan method POST ke /logout (bukan GET), dengan expected_status 302.
 - Generate 3-10 test cases yang relevan
 - Sertakan positive test (happy path) dan negative test (error handling)
 - URUTAN TEST CASE SANGAT PENTING! Untuk CRUD, SELALU gunakan urutan ini:
