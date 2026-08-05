@@ -176,9 +176,10 @@ class AiTestGeneratorController extends Controller
      */
     private function callGemini(string $apiKey, string $systemPrompt, string $userPrompt): array
     {
+        @set_time_limit(300);
         $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $apiKey;
 
-        $response = Http::timeout(60)->post($url, [
+        $response = Http::timeout(180)->post($url, [
             'contents' => [
                 [
                     'role' => 'user',
@@ -214,12 +215,13 @@ class AiTestGeneratorController extends Controller
      */
     private function callOpenRouter(string $apiKey, string $systemPrompt, string $userPrompt): array
     {
+        @set_time_limit(300);
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $apiKey,
             'Content-Type' => 'application/json',
             'HTTP-Referer' => config('app.url', 'http://localhost'),
             'X-Title' => 'Blackbox Testing Tool',
-        ])->timeout(60)->post('https://openrouter.ai/api/v1/chat/completions', [
+        ])->timeout(180)->post('https://openrouter.ai/api/v1/chat/completions', [
             'model' => 'openrouter/free',
             'messages' => [
                 ['role' => 'system', 'content' => $systemPrompt],

@@ -29,6 +29,7 @@ class TestRunnerController extends Controller
      */
     public function quickTest(Request $request): JsonResponse
     {
+        @set_time_limit(300);
         $validated = $request->validate([
             'url' => ['required', 'url', 'max:500'],
             'username' => ['nullable', 'string', 'max:255'],
@@ -45,27 +46,33 @@ class TestRunnerController extends Controller
         $host = $parsedUrl['host'] ?? 'Target Website';
         $projectName = 'Quick Test - ' . $host;
 
-        // Auto-crawl / scan target page to discover real endpoints & login form inputs
+        // Handle multi-account array preparation
+        $accounts = $validated['accounts'] ?? [];
+        if (empty($accounts) && ! empty($validated['username']) && ! empty($validated['password'])) {
+            $accounts[] = [
+                'role' => 'Pengguna',
+                'username' => $validated['username'],
+                'password' => $validated['password'],
+            ];
+        }
+
+        // Auto-crawl / scan target page & logged-in dashboard HTML to discover ALL real endpoints & submenus
         $discoveredEndpoints = [];
         $loginInputNames = [];
 
         try {
+            // 1. Fetch public home page HTML
             $crawlResponse = Http::timeout(10)->withoutVerifying()->get($url);
             if ($crawlResponse->successful()) {
                 $html = $crawlResponse->body();
-                // Extract relative links and form actions
                 if (preg_match_all('/(?:href|action)=["\'](\/[^"\'#\?]*)/i', $html, $matches)) {
-                    $discoveredEndpoints = array_values(array_unique($matches[1]));
-                    // Filter out static assets (.css, .js, images, fonts)
-                    $discoveredEndpoints = array_filter($discoveredEndpoints, function ($ep) {
-                        return ! preg_match('/\.(css|js|png|jpg|jpeg|svg|ico|gif|woff|woff2|ttf|eot)$/i', $ep);
-                    });
-                    $discoveredEndpoints = array_values(array_slice($discoveredEndpoints, 0, 15));
+                    $discoveredEndpoints = array_merge($discoveredEndpoints, $matches[1]);
                 }
             }
 
-            // Try fetching /login page to inspect input field names
+            // 2. Fetch /login page HTML to inspect login form input names & CSRF
             $loginUrl = rtrim($url, '/') . '/login';
+            $loginHtml = '';
             $loginResp = Http::timeout(10)->withoutVerifying()->get($loginUrl);
             if ($loginResp->successful()) {
                 $loginHtml = $loginResp->body();
@@ -75,6 +82,87 @@ class TestRunnerController extends Controller
                     }));
                 }
             }
+
+            // 3. LOG IN IN BACKGROUND TO SCAN INTERNAL LOGGED-IN DASHBOARD SUBMENUS
+            if (! empty($accounts)) {
+                foreach ($accounts as $acc) {
+                    if (! empty($acc['username']) && ! empty($acc['password'])) {
+                        $tempJar = new \GuzzleHttp\Cookie\CookieJar();
+
+                        // Extract CSRF token
+                        $csrfToken = null;
+                        if (! empty($loginHtml)) {
+                            if (preg_match('/<meta\s+name=["\']csrf-token["\']\s+content=["\']([^"\']+)["\']/i', $loginHtml, $m)) {
+                                $csrfToken = $m[1];
+                            } elseif (preg_match('/<input[^>]+name=["\']_token["\'][^>]+value=["\']([^"\']+)["\']/i', $loginHtml, $m)) {
+                                $csrfToken = $m[1];
+                            }
+                        }
+
+                        // Determine form field names
+                        $userField = 'email';
+                        if (! empty($loginInputNames)) {
+                            foreach ($loginInputNames as $f) {
+                                if (in_array(strtolower($f), ['username', 'email', 'user', 'identity', 'login'])) {
+                                    $userField = $f;
+                                    break;
+                                }
+                            }
+                        }
+                        $passField = 'password';
+                        foreach ($loginInputNames as $f) {
+                            if (in_array(strtolower($f), ['password', 'pass', 'pwd'])) {
+                                $passField = $f;
+                                break;
+                            }
+                        }
+
+                        $loginBody = [
+                            $userField => $acc['username'],
+                            $passField => $acc['password'],
+                        ];
+                        if ($csrfToken) {
+                            $loginBody['_token'] = $csrfToken;
+                        }
+
+                        // Perform login POST request
+                        Http::timeout(10)->withoutVerifying()->withOptions([
+                            'cookies' => $tempJar,
+                            'allow_redirects' => true,
+                        ])->asForm()->post($loginUrl, $loginBody);
+
+                        // Crawl logged-in dashboard submenus
+                        $dashPages = ['/admin/dashboard', '/admin', '/dashboard', '/workspace', '/user/workspace'];
+                        foreach ($dashPages as $dashPath) {
+                            try {
+                                $dashResp = Http::timeout(10)->withoutVerifying()->withOptions([
+                                    'cookies' => $tempJar,
+                                    'allow_redirects' => true,
+                                ])->get(rtrim($url, '/') . $dashPath);
+
+                                if ($dashResp->successful()) {
+                                    $dashHtml = $dashResp->body();
+                                    if (preg_match_all('/(?:href|action)=["\'](\/[^"\'#\?]*)/i', $dashHtml, $dMatches)) {
+                                        $discoveredEndpoints = array_merge($discoveredEndpoints, $dMatches[1]);
+                                    }
+                                }
+                            } catch (\Exception $e) {
+                                // Ignore individual page crawl errors
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Clean & filter discovered endpoints
+            $discoveredEndpoints = array_values(array_unique($discoveredEndpoints));
+            $discoveredEndpoints = array_values(array_filter($discoveredEndpoints, function ($ep) {
+                return ! preg_match('/\.(css|js|png|jpg|jpeg|svg|ico|gif|woff|woff2|ttf|eot|pdf|zip)$/i', $ep)
+                    && ! str_starts_with($ep, '//')
+                    && $ep !== '/logout';
+            }));
+            $discoveredEndpoints = array_values(array_slice($discoveredEndpoints, 0, 45));
+
         } catch (\Exception $e) {
             // Silence crawl errors, AI will fall back to standard URL generation
         }
@@ -88,21 +176,11 @@ class TestRunnerController extends Controller
         }
 
         if (! empty($discoveredEndpoints)) {
-            $promptParts[] = 'Berikut adalah beberapa endpoint/URL asli yang terdeteksi dari HTML website: ' . implode(', ', $discoveredEndpoints);
+            $promptParts[] = 'Berikut adalah URL/endpoint internal ASLI yang BERHASIL TERDETEKSI LANGSUNG dari HTML sidebar & dashboard website setelah login: ' . implode(', ', $discoveredEndpoints) . '. Uji SELURUH endpoint asli ini secara mendalam!';
         }
 
         if (! empty($loginInputNames)) {
             $promptParts[] = 'Form login terdeteksi menggunakan nama input field: ' . implode(', ', $loginInputNames) . '. Gunakan nama field ini secara tepat pada body_params POST /login.';
-        }
-
-        // Handle multi-account support
-        $accounts = $validated['accounts'] ?? [];
-        if (empty($accounts) && ! empty($validated['username']) && ! empty($validated['password'])) {
-            $accounts[] = [
-                'role' => 'Pengguna',
-                'username' => $validated['username'],
-                'password' => $validated['password'],
-            ];
         }
 
         if (! empty($accounts)) {
@@ -207,6 +285,7 @@ class TestRunnerController extends Controller
      */
     public function run(Request $request, TestProject $project): JsonResponse
     {
+        @set_time_limit(300);
         $suiteId = $request->input('suite_id');
 
         if ($suiteId) {
@@ -398,7 +477,7 @@ class TestRunnerController extends Controller
                 $this->refreshCsrfTokenFromPage($project, $case->endpoint);
             }
 
-            $request = Http::timeout(30)
+            $request = Http::timeout(60)
                 ->withoutVerifying()
                 ->withOptions([
                     'cookies' => $this->cookieJar,
