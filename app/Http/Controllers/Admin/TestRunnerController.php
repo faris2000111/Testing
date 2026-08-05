@@ -25,6 +25,165 @@ class TestRunnerController extends Controller
     private ?string $csrfToken = null;
 
     /**
+     * Quick Auto-Test: Create project (if needed), generate test cases via AI, and run immediately.
+     */
+    public function quickTest(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'url' => ['required', 'url', 'max:500'],
+            'username' => ['nullable', 'string', 'max:255'],
+            'password' => ['nullable', 'string', 'max:255'],
+            'prompt' => ['nullable', 'string', 'max:2000'],
+            'accounts' => ['nullable', 'array'],
+            'accounts.*.role' => ['nullable', 'string', 'max:100'],
+            'accounts.*.username' => ['nullable', 'string', 'max:255'],
+            'accounts.*.password' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $url = rtrim($validated['url'], '/');
+        $parsedUrl = parse_url($url);
+        $host = $parsedUrl['host'] ?? 'Target Website';
+        $projectName = 'Quick Test - ' . $host;
+
+        // Auto-crawl / scan target page to discover real endpoints
+        $discoveredEndpoints = [];
+        try {
+            $crawlResponse = Http::timeout(10)->withoutVerifying()->get($url);
+            if ($crawlResponse->successful()) {
+                $html = $crawlResponse->body();
+                // Extract relative links and form actions
+                if (preg_match_all('/(?:href|action)=["\'](\/[^"\'#\?]*)/i', $html, $matches)) {
+                    $discoveredEndpoints = array_values(array_unique($matches[1]));
+                    // Filter out static assets (.css, .js, images, fonts)
+                    $discoveredEndpoints = array_filter($discoveredEndpoints, function ($ep) {
+                        return ! preg_match('/\.(css|js|png|jpg|jpeg|svg|ico|gif|woff|woff2|ttf|eot)$/i', $ep);
+                    });
+                    $discoveredEndpoints = array_values(array_slice($discoveredEndpoints, 0, 15));
+                }
+            }
+        } catch (\Exception $e) {
+            // Silence crawl errors, AI will fall back to standard URL generation
+        }
+
+        // Build prompt context
+        $promptParts = [];
+        if (! empty($validated['prompt'])) {
+            $promptParts[] = $validated['prompt'];
+        } else {
+            $promptParts[] = 'Generasikan blackbox test cases otomatis untuk menguji website ini.';
+        }
+
+        if (! empty($discoveredEndpoints)) {
+            $promptParts[] = 'Berikut adalah beberapa endpoint/URL asli yang terdeteksi dari HTML website: ' . implode(', ', $discoveredEndpoints);
+        }
+
+        // Handle multi-account support
+        $accounts = $validated['accounts'] ?? [];
+        if (empty($accounts) && ! empty($validated['username']) && ! empty($validated['password'])) {
+            $accounts[] = [
+                'role' => 'Pengguna',
+                'username' => $validated['username'],
+                'password' => $validated['password'],
+            ];
+        }
+
+        if (! empty($accounts)) {
+            $accountText = [];
+            foreach ($accounts as $idx => $acc) {
+                if (! empty($acc['username']) && ! empty($acc['password'])) {
+                    $roleName = ! empty($acc['role']) ? $acc['role'] : ('Role ' . ($idx + 1));
+                    $accountText[] = sprintf(
+                        'Akun #%d [Role: %s] -> Username/Email: "%s", Password: "%s"',
+                        $idx + 1,
+                        $roleName,
+                        $acc['username'],
+                        $acc['password']
+                    );
+                }
+            }
+
+            if (! empty($accountText)) {
+                $promptParts[] = "Website ini memiliki beberapa akun/role login yang akan diuji.\n" .
+                    "Daftar Kredensial Akun per Role:\n" . implode("\n", $accountText) . "\n\n" .
+                    "Instruksi Pengujian Multirole:\n" .
+                    "- Buatkan skenario test case terpisah untuk masing-masing role di atas.\n" .
+                    "- Untuk setiap role, awali dengan test case POST login menggunakan kredensial role tersebut (misal POST /login dengan body_params email/username & password).\n" .
+                    "- Apabila berganti pengujian dari satu akun ke akun lainnya, sertakan test case GET /logout terlebih dahulu agar session ter-reset.\n" .
+                    "- Uji halaman dashboard dan fitur-fitur yang sesuai untuk masing-masing role (misal: /admin/dashboard, /admin/users untuk Admin; dan /dashboard, /profile, /workspace untuk Pengguna).";
+            }
+        }
+
+        $fullPrompt = implode("\n\n", $promptParts);
+
+        // Find or create project
+        $project = TestProject::firstOrCreate(
+            ['base_url' => $url],
+            [
+                'name' => $projectName,
+                'description' => 'Quick Auto-Test untuk ' . $url,
+                'is_active' => true,
+            ]
+        );
+
+        $aiGenerator = app(AiTestGeneratorController::class);
+
+        $aiRequest = new Request([
+            'prompt' => $fullPrompt,
+            'project_name' => $project->name,
+            'base_url' => $project->base_url,
+        ]);
+
+        $aiResponse = $aiGenerator->generateBlackbox($aiRequest);
+        $aiData = json_decode($aiResponse->getContent(), true);
+
+        if (! ($aiData['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $aiData['message'] ?? 'Gagal membuat test cases dengan AI.',
+            ], 422);
+        }
+
+        $casesData = $aiData['data']['test_cases'] ?? [];
+        if (empty($casesData)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI tidak mengembalikan test case yang valid.',
+            ], 422);
+        }
+
+        // Store generated test cases directly without suite
+        $currentMaxOrder = $project->testCases()->max('order') ?? 0;
+        foreach ($casesData as $index => $c) {
+            \App\Models\TestCase::create([
+                'test_project_id' => $project->id,
+                'test_suite_id' => null,
+                'title' => $c['title'] ?? ('Test Case ' . ($index + 1)),
+                'description' => $c['description'] ?? null,
+                'method' => strtoupper($c['method'] ?? 'GET'),
+                'endpoint' => $c['endpoint'] ?? '/',
+                'headers' => $c['headers'] ?? null,
+                'body_params' => $c['body_params'] ?? null,
+                'expected_status' => (int) ($c['expected_status'] ?? 200),
+                'expected_contains' => $c['expected_contains'] ?? null,
+                'expected_not_contains' => $c['expected_not_contains'] ?? null,
+                'order' => $currentMaxOrder + $index + 1,
+                'is_active' => true,
+            ]);
+        }
+
+        // Execute tests immediately
+        $runResponse = $this->run(new Request(), $project);
+        $runData = json_decode($runResponse->getContent(), true);
+
+        if ($runData['success'] ?? false) {
+            $runData['redirect_url'] = route('admin.blackbox.projects.runs.show', [$project, $runData['run_id']]);
+            $runData['project_url'] = route('admin.blackbox.projects.show', $project);
+        }
+
+        return response()->json($runData);
+    }
+
+    /**
      * Run all active test cases for a project (optionally filtered by suite).
      */
     public function run(Request $request, TestProject $project): JsonResponse

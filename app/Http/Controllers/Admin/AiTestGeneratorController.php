@@ -220,7 +220,7 @@ class AiTestGeneratorController extends Controller
             'HTTP-Referer' => config('app.url', 'http://localhost'),
             'X-Title' => 'Blackbox Testing Tool',
         ])->timeout(60)->post('https://openrouter.ai/api/v1/chat/completions', [
-            'model' => 'google/gemini-2.0-flash-001',
+            'model' => 'openrouter/free',
             'messages' => [
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user', 'content' => $userPrompt],

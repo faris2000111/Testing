@@ -83,6 +83,7 @@ Route::prefix('admin')->middleware(['auth', 'maintenance', 'menu.access'])->name
 
     // Blackbox Testing
     Route::prefix('blackbox')->name('blackbox.')->group(function () {
+        Route::post('/quick-test', [TestRunnerController::class, 'quickTest'])->name('quick-test');
         Route::resource('projects', TestProjectController::class);
         Route::post('/projects/{project}/run', [TestRunnerController::class, 'run'])->name('projects.run');
         Route::get('/projects/{project}/runs/{run}', [TestRunnerController::class, 'show'])->name('projects.runs.show');
