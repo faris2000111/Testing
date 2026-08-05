@@ -279,11 +279,16 @@ class TestRunnerController extends Controller
             'redirect_url' => route('admin.blackbox.projects.show', ['project' => $project->id, 'auto_run' => 1]),
             'project_url' => route('admin.blackbox.projects.show', $project),
         ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi input tidak sesuai: ' . implode(', ', \Illuminate\Support\Arr::flatten($e->errors())),
+            ], 422);
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan server: ' . $e->getMessage(),
-            ], 500);
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 

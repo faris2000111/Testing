@@ -16,7 +16,7 @@ class AiTestGeneratorController extends Controller
     public function generate(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'prompt' => ['required', 'string', 'max:2000'],
+            'prompt' => ['required', 'string', 'max:50000'],
             'project_name' => ['nullable', 'string', 'max:255'],
             'base_url' => ['nullable', 'string', 'max:500'],
             'module' => ['nullable', 'string', 'max:100'],
@@ -65,7 +65,7 @@ class AiTestGeneratorController extends Controller
     public function generateBlackbox(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'prompt' => ['required', 'string', 'max:2000'],
+            'prompt' => ['required', 'string', 'max:50000'],
             'project_name' => ['nullable', 'string', 'max:255'],
             'base_url' => ['nullable', 'string', 'max:500'],
         ]);
